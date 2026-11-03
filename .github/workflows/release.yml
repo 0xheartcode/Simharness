@@ -21,6 +21,11 @@ jobs:
         with:
           deno-version: "2.9.8"
 
+      # cli.ts references the Node `process` global, so `deno check` (and the
+      # compile type-check) needs @types/node from node_modules. Install it.
+      - name: Install npm dependencies
+        run: deno install
+
       - name: Verify the tag matches src/version.ts
         run: |
           TAG="${GITHUB_REF_NAME#v}"

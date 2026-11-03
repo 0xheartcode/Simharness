@@ -18,6 +18,11 @@ jobs:
           # Pinned for reproducible CI; bump deliberately (mirror in README).
           deno-version: "2.9.8"
 
+      # cli.ts references the Node `process` global, so `deno check` needs
+      # @types/node from node_modules. A fresh CI checkout has none; install it.
+      - name: Install npm dependencies
+        run: deno install
+
       - name: make check
         run: make check
 
