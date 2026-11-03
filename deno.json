@@ -1,0 +1,63 @@
+{
+  "name": "@0xheartcode/simharness",
+  "version": "0.0.0-alpha.0",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/index.ts",
+    "./adapter": "./src/adapter.ts",
+    "./config": "./src/config.ts",
+    "./cli": "./src/cli.ts"
+  },
+  "imports": {
+    "@0xheartcode/simharness": "./src/index.ts",
+    "@0xheartcode/simharness/adapter": "./src/adapter.ts",
+    "@0xheartcode/simharness/config": "./src/config.ts",
+    "@0xheartcode/simharness/cli": "./src/cli.ts"
+  },
+  "unstable": ["sloppy-imports"],
+  "compilerOptions": {
+    "lib": ["deno.window", "deno.ns", "dom", "dom.iterable", "esnext"],
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "tasks": {
+    "cli": "deno run --allow-read --allow-write --allow-env src/main.ts",
+    "check": "deno check src/ tests/ examples/",
+    "test": "deno test --allow-read --allow-write --allow-env --allow-run --coverage=coverage",
+    "cov": "deno coverage coverage",
+    "compile": "deno compile --allow-read --allow-write --allow-env --import-map deno.json --output dist/simharness src/main.ts"
+  },
+  "fmt": {
+    "lineWidth": 120,
+    "semiColons": true,
+    "singleQuote": false,
+    "exclude": ["coverage/", "dist/", "node_modules/", ".simharness-snap/", "pnpm-lock.yaml", "pnpm-workspace.yaml"]
+  },
+  "lint": {
+    "exclude": ["coverage/", "dist/", "node_modules/"],
+    "rules": {
+      "exclude": ["no-sloppy-imports"]
+    }
+  },
+  "exclude": ["coverage/", "dist/", "node_modules/", ".simharness-snap/", "pnpm-lock.yaml"],
+  "publish": {
+    "exclude": [
+      "bin/",
+      "src/main.ts",
+      "examples/",
+      "tests/",
+      "scripts/",
+      "coverage/",
+      "dist/",
+      "node_modules/",
+      ".github/",
+      "Makefile",
+      "package.json",
+      "pnpm-lock.yaml",
+      "pnpm-workspace.yaml",
+      "tsconfig.json"
+    ]
+  }
+}

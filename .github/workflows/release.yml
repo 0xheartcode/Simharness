@@ -1,0 +1,56 @@
+name: Release
+
+# Tag-driven releases: push a tag like `v0.0.0-alpha.0` and this builds the
+# self-contained `simharness` binary for every target (deno cross-compiles them
+# all from one Linux runner) and attaches them to the GitHub Release.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: "2.9.8"
+
+      - name: Verify the tag matches src/version.ts
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          SRC="$(deno run --allow-read -e 'const t=await Deno.readTextFile("src/version.ts");console.log(t.match(/VERSION\s*=\s*"([^"]+)"/)[1])')"
+          echo "tag=$TAG version.ts=$SRC"
+          test "$TAG" = "$SRC" || { echo "::error::tag v$TAG does not match src/version.ts ($SRC)"; exit 1; }
+
+      - name: Gate before release
+        run: make check
+
+      - name: Cross-compile every target
+        run: |
+          mkdir -p dist
+          TARGETS="x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu x86_64-apple-darwin aarch64-apple-darwin x86_64-pc-windows-msvc"
+          for t in $TARGETS; do
+            echo "── $t ──"
+            out="dist/simharness-$t"
+            deno compile --allow-read --allow-write --allow-env --target "$t" --output "$out" src/main.ts
+            if [ "$t" = "x86_64-pc-windows-msvc" ]; then
+              zip -j "dist/simharness-$t.zip" "$out.exe"
+            else
+              tar -czf "dist/simharness-$t.tar.gz" -C dist "simharness-$t"
+            fi
+          done
+          ls -la dist
+
+      - name: Publish the GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.tar.gz
+            dist/*.zip
+          generate_release_notes: true

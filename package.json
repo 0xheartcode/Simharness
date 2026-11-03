@@ -1,0 +1,30 @@
+{
+  "name": "@0xheartcode/simharness",
+  "version": "0.0.0-alpha.0",
+  "description": "Game-agnostic AI dev harness: deterministic headless runs, scriptable input, typed state, ASCII snapshots, assertions, replay, fuzz, autoplay and balance metrics, behind one SimAdapter.",
+  "type": "module",
+  "bin": {
+    "simharness": "bin/simharness.mjs"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./cli": "./src/cli.ts",
+    "./adapter": "./src/adapter.ts",
+    "./config": "./src/config.ts"
+  },
+  "files": [
+    "src",
+    "bin",
+    "README.md"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "esbuild": "~0.21.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "typescript": "~5.6.3"
+  }
+}

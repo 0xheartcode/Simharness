@@ -1,0 +1,24 @@
+node_modules/
+.simharness-snap/
+*.log
+.DS_Store
+
+# build + coverage artifacts
+dist/
+coverage/
+
+# local-only design notes (kept out of the public repo)
+docs/
+
+# secrets / local env
+.env
+.env.*
+
+# editor + OS
+.vscode/
+.idea/
+*.swp
+
+# misc build output
+*.tgz
+*.tsbuildinfo
