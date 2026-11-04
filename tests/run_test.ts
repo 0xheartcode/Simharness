@@ -43,6 +43,12 @@ Deno.test("run: derives a 'hero-down' event on the transition to down", () => {
   assert(r.final.hero?.down);
 });
 
+Deno.test("run: forwards config to reset(seed, config)", () => {
+  const a = new MockAdapter();
+  run(a, { seed: 1, ticks: 1, stopOnEnd: false, config: { difficulty: "hard" } });
+  assertEquals(a.receivedConfig, { difficulty: "hard" });
+});
+
 Deno.test("run: noReset keeps a pre-staged state", () => {
   const a = new MockAdapter();
   a.reset(1);

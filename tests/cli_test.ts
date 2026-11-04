@@ -1,7 +1,7 @@
 import { runCli } from "@0xheartcode/simharness/cli";
 import type { SimharnessConfig } from "@0xheartcode/simharness/config";
 import { MockAdapter, type MockExtra, type MockOpts } from "./mock_adapter.ts";
-import { assert, assertStrictEquals, captureExit } from "./assert.ts";
+import { assert, assertEquals, assertStrictEquals, captureExit } from "./assert.ts";
 
 interface CfgOpts extends MockOpts {
   withAsserts?: "pass" | "fail";
@@ -143,6 +143,19 @@ Deno.test("cli: assert --json carries the per-assert results", () => {
   const o = JSON.parse(out.join("\n"));
   assertStrictEquals(o.ok, false);
   assert(o.asserts.some((r: { name: string; ok: boolean }) => r.name === "conditional" && !r.ok));
+});
+
+Deno.test("cli: --config forwards parsed JSON to the adapter reset", () => {
+  const a = new MockAdapter({ endAt: 2 });
+  const cfg: SimharnessConfig<MockExtra> = { createAdapter: () => a };
+  captureExit(() => runCli(cfg, ["run", "1", "5", "--config", '{"mode":"x"}']));
+  assertEquals(a.receivedConfig, { mode: "x" });
+});
+
+Deno.test("cli: invalid --config JSON exits 2", () => {
+  const { code, err } = captureExit(() => runCli(makeConfig(), ["run", "1", "5", "--config", "{bad"]));
+  assertStrictEquals(code, 2);
+  assert(err.join("\n").includes("not valid JSON"));
 });
 
 Deno.test("cli: unknown command prints usage", () => {

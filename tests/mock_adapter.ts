@@ -34,10 +34,12 @@ export class MockAdapter implements SimAdapter<MockExtra> {
   private fired = 0;
   private input: InputState = {};
   private staged = 0;
+  private lastConfig?: Record<string, unknown>;
 
   constructor(private opts: MockOpts = {}) {}
 
-  reset(seed: number, _opts?: Record<string, unknown>): void {
+  reset(seed: number, config?: Record<string, unknown>): void {
+    this.lastConfig = config;
     this.tick = 0;
     this.phase = "running";
     this.hero = { x: 0, y: 0, hp: 5, maxHp: 5, down: false };
@@ -98,5 +100,10 @@ export class MockAdapter implements SimAdapter<MockExtra> {
   /** Exposed so a test can assert staging ran. */
   get stagedCount(): number {
     return this.staged;
+  }
+
+  /** The config passed to the most recent reset(), for asserting it was threaded through. */
+  get receivedConfig(): Record<string, unknown> | undefined {
+    return this.lastConfig;
   }
 }

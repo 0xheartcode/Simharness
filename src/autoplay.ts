@@ -3,7 +3,10 @@ import { run, type RunResult } from "./run";
 import { strategies } from "./strategies";
 import type { GameState, SimAdapter, Strategy } from "./adapter";
 
-export interface AutoplayOpts<TExtra extends Record<string, unknown> = Record<string, unknown>> {
+export interface AutoplayOpts<
+  TExtra extends Record<string, unknown> = Record<string, unknown>,
+  TConfig extends Record<string, unknown> = Record<string, unknown>,
+> {
   seed: number;
   ticks: number;
   /** Strategy name to resolve against the built-ins + `strategies` (default "aggressive"). */
@@ -12,6 +15,8 @@ export interface AutoplayOpts<TExtra extends Record<string, unknown> = Record<st
   strategies?: Record<string, Strategy<TExtra>>;
   /** Enforce invariants on this run (recorded in `RunResult.invariantBreaks`). */
   invariants?: (s: GameState<TExtra>) => string[];
+  /** Typed run config forwarded to `reset(seed, config)`. */
+  config?: TConfig;
 }
 
 /**
@@ -34,10 +39,19 @@ export function resolveStrategy<TExtra extends Record<string, unknown>>(
   return strat;
 }
 
-export function autoplay<TExtra extends Record<string, unknown>>(
-  a: SimAdapter<TExtra>,
-  o: AutoplayOpts<TExtra>,
+export function autoplay<
+  TExtra extends Record<string, unknown>,
+  TConfig extends Record<string, unknown> = Record<string, unknown>,
+>(
+  a: SimAdapter<TExtra, TConfig>,
+  o: AutoplayOpts<TExtra, TConfig>,
 ): RunResult<TExtra> {
   const strat = resolveStrategy<TExtra>(o.strategy ?? "aggressive", o.strategies);
-  return run(a, { seed: o.seed, ticks: o.ticks, timeline: (_t, s) => strat(s, a), invariants: o.invariants });
+  return run(a, {
+    seed: o.seed,
+    ticks: o.ticks,
+    timeline: (_t, s) => strat(s, a),
+    invariants: o.invariants,
+    config: o.config,
+  });
 }

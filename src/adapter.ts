@@ -48,9 +48,13 @@ export interface GameState<TExtra extends Record<string, unknown> = Record<strin
   extra: TExtra;
 }
 
-export interface SimAdapter<TExtra extends Record<string, unknown> = Record<string, unknown>> {
+export interface SimAdapter<
+  TExtra extends Record<string, unknown> = Record<string, unknown>,
+  TConfig extends Record<string, unknown> = Record<string, unknown>,
+> {
   readonly name: string;
-  reset(seed: number, opts?: Record<string, unknown>): void;
+  /** Start a fresh, seeded run. `config` is typed per-adapter (hero class, difficulty, mode, ...). */
+  reset(seed: number, config?: TConfig): void;
   step(dt: number): void;
   setInput(partial: InputState): void;
   readState(): GameState<TExtra>;

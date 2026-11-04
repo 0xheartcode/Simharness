@@ -13,7 +13,17 @@ import { fuzz } from "./fuzz";
 import { strategies } from "./strategies";
 import { diffMetrics, formatDiff } from "./baseline";
 
-const VALUE_FLAGS = new Set(["against", "tolerance"]);
+const VALUE_FLAGS = new Set(["against", "tolerance", "config"]);
+
+/** Parse `--config '<json>'` into an object (throws on invalid JSON). */
+function parseConfigFlag(v: string | true | undefined): Record<string, unknown> | undefined {
+  if (typeof v !== "string") return undefined;
+  try {
+    return JSON.parse(v) as Record<string, unknown>;
+  } catch {
+    throw new Error(`--config is not valid JSON: ${v}`);
+  }
+}
 
 /** Resolve a baseline name to a file path (`<name>` -> `.simharness-baseline/<name>.json`; a path/`.json` is used as-is). */
 function baselinePath(name: string): string {
@@ -83,6 +93,13 @@ export function runCli<TExtra extends Record<string, unknown>>(
   const json = flags.json === true;
   const cmd = pos[0] ?? "help";
   const num = (i: number, d: number): number => (pos[i] !== undefined ? +pos[i] : d);
+  let runConfig: Record<string, unknown> | undefined;
+  try {
+    runConfig = parseConfigFlag(flags.config);
+  } catch (e) {
+    console.error((e as Error).message);
+    process.exit(2);
+  }
   const stage = (seed: number): void => {
     if (config.stage) config.stage(a, seed);
     else {
@@ -99,6 +116,7 @@ export function runCli<TExtra extends Record<string, unknown>>(
         ticks: num(2, 600),
         timeline: (_t, s) => strategies.aggressive(s, a),
         invariants: config.invariants,
+        config: runConfig,
       });
       if (json) emit(runPayload(seed, r));
       else printRun(seed, r);
@@ -118,6 +136,7 @@ export function runCli<TExtra extends Record<string, unknown>>(
           strategy: pos[3],
           strategies: config.strategies,
           invariants: config.invariants,
+          config: runConfig,
         });
         if (json) emit(runPayload(seed, r));
         else printRun(seed, r);
