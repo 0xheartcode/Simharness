@@ -2,6 +2,9 @@
 // command works through the SimAdapter; project-specific logic (staging,
 // assertions, metrics, invariants) comes from the config. The run printout shows
 // the universal core plus a flat dump of the game's `extra`.
+//
+// Flags (anywhere in argv): --json emits a single machine-readable JSON object
+// and suppresses the human text (for run / autoplay / balance / fuzz).
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import type { SimharnessConfig } from "./config";
 import type { GameState, SimEvent } from "./adapter";
@@ -9,6 +12,19 @@ import { run } from "./run";
 import { autoplay } from "./autoplay";
 import { fuzz } from "./fuzz";
 import { strategies } from "./strategies";
+
+function emit(payload: unknown): void {
+  console.log(JSON.stringify(payload, null, 2));
+}
+
+function runPayload<T extends Record<string, unknown>>(seed: number, r: { final: GameState<T>; events: SimEvent[] }) {
+  const f = r.final;
+  return {
+    seed,
+    final: { tick: f.tick, phase: f.phase, hero: f.hero, enemies: f.enemies.length, extra: f.extra },
+    events: r.events,
+  };
+}
 
 function printRun<T extends Record<string, unknown>>(
   seed: number,
@@ -38,8 +54,11 @@ export function runCli<TExtra extends Record<string, unknown>>(
   argv: string[] = process.argv.slice(2),
 ): void {
   const a = config.createAdapter();
-  const cmd = argv[0] ?? "help";
-  const num = (i: number, d: number): number => (argv[i] !== undefined ? +argv[i] : d);
+  const pos = argv.filter((x) => !x.startsWith("--"));
+  const flags = new Set(argv.filter((x) => x.startsWith("--")));
+  const json = flags.has("--json");
+  const cmd = pos[0] ?? "help";
+  const num = (i: number, d: number): number => (pos[i] !== undefined ? +pos[i] : d);
   const stage = (seed: number): void => {
     if (config.stage) config.stage(a, seed);
     else {
@@ -49,36 +68,42 @@ export function runCli<TExtra extends Record<string, unknown>>(
   };
 
   switch (cmd) {
-    case "run":
-      printRun(
-        num(1, 1),
-        run(a, { seed: num(1, 1), ticks: num(2, 600), timeline: (_t, s) => strategies.aggressive(s, a) }),
-      );
+    case "run": {
+      const seed = num(1, 1);
+      const r = run(a, { seed, ticks: num(2, 600), timeline: (_t, s) => strategies.aggressive(s, a) });
+      if (json) emit(runPayload(seed, r));
+      else printRun(seed, r);
       break;
+    }
     case "ascii":
       stage(num(1, 1));
       console.log(a.snapshotAscii());
       break;
-    case "autoplay":
+    case "autoplay": {
+      const seed = num(1, 1);
       try {
-        printRun(
-          num(1, 1),
-          autoplay(a, { seed: num(1, 1), ticks: num(2, 2000), strategy: argv[3], strategies: config.strategies }),
-        );
+        const r = autoplay(a, { seed, ticks: num(2, 2000), strategy: pos[3], strategies: config.strategies });
+        if (json) emit(runPayload(seed, r));
+        else printRun(seed, r);
       } catch (e) {
-        console.error((e as Error).message);
+        if (json) emit({ error: (e as Error).message });
+        else console.error((e as Error).message);
         process.exit(1);
       }
       break;
+    }
     case "fuzz": {
       const seeds = num(1, 20), ticks = num(2, 600);
       const f = fuzz(a, { seeds, ticks, invariants: config.invariants });
-      if (f.length) {
+      if (json) {
+        emit({ ok: f.length === 0, seeds, ticks, failures: f });
+      } else if (f.length) {
         console.error("FUZZ FAILURES:");
         f.forEach((x) => console.error("  " + x));
-        process.exit(1);
+      } else {
+        console.log(`fuzz OK: ${seeds} seeds x ${ticks} ticks, no invariant broke`);
       }
-      console.log(`fuzz OK: ${seeds} seeds x ${ticks} ticks, no invariant broke`);
+      if (f.length) process.exit(1);
       break;
     }
     case "assert": {
@@ -87,12 +112,13 @@ export function runCli<TExtra extends Record<string, unknown>>(
         process.exit(2);
       }
       const res = config.asserts(a);
-      let ok = true;
-      for (const r of res) {
-        console.log(`${r.ok ? "PASS" : "FAIL"}  ${r.name}${r.msg ? "  (" + r.msg + ")" : ""}`);
-        if (!r.ok) ok = false;
+      const ok = res.every((r) => r.ok);
+      if (json) {
+        emit({ ok, asserts: res });
+      } else {
+        for (const r of res) console.log(`${r.ok ? "PASS" : "FAIL"}  ${r.name}${r.msg ? "  (" + r.msg + ")" : ""}`);
+        console.log(ok ? "ALL PASS" : "FAILURES");
       }
-      console.log(ok ? "ALL PASS" : "FAILURES");
       process.exit(ok ? 0 : 1);
       break; // unreachable (process.exit does not return); satisfies no-fallthrough
     }
@@ -102,8 +128,12 @@ export function runCli<TExtra extends Record<string, unknown>>(
         process.exit(2);
       }
       const m = config.metrics(a, { seeds: num(1, 8), ticks: num(2, 60 * 80) });
-      console.log(JSON.stringify(m.summary, null, 2));
-      m.rows.forEach((r) => console.log("  " + r));
+      if (json) {
+        emit(m.summary);
+      } else {
+        console.log(JSON.stringify(m.summary, null, 2));
+        m.rows.forEach((r) => console.log("  " + r));
+      }
       break;
     }
     case "snap": {
@@ -130,13 +160,14 @@ export function runCli<TExtra extends Record<string, unknown>>(
     }
     default:
       console.log(`simharness: game-agnostic AI dev harness (adapter: ${a.name})
-Usage: simharness <cmd>   (needs a simharness.config.ts in the cwd)
+Usage: simharness <cmd> [--json]   (needs a simharness.config.ts in the cwd)
   run <seed> [ticks]                autoplay a run, print final state + events
   ascii <seed>                      staged scene -> ASCII board snapshot
-  autoplay <seed> [ticks] [strat]   strat = aggressive | turtle | random | idle
+  autoplay <seed> [ticks] [strat]   strat = a built-in or a config strategy
   fuzz [seeds] [ticks]              random inputs, assert invariants (CI gate)
   assert                            project assertions (CI gate)
   balance [seeds] [ticks]           project balance metrics
-  snap <seed>                       write/diff an ASCII snapshot (regression)`);
+  snap <seed>                       write/diff an ASCII snapshot (regression)
+  --json                            machine-readable output (run/autoplay/fuzz/assert/balance)`);
   }
 }

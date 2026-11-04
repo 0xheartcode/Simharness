@@ -104,6 +104,40 @@ Deno.test("cli: balance exits 2 when the config has no metrics()", () => {
   assert(err.join("\n").includes("No metrics()"));
 });
 
+Deno.test("cli: run --json emits one parseable object and no human text", () => {
+  const { out } = captureExit(() => runCli(makeConfig({ endAt: 5 }), ["run", "7", "50", "--json"]));
+  const text = out.join("\n");
+  assert(!text.includes("events (last 12)"), "no human text in --json mode");
+  const o = JSON.parse(text);
+  assertStrictEquals(o.seed, 7);
+  assert(typeof o.final.tick === "number" && Array.isArray(o.events));
+});
+
+Deno.test("cli: balance --json emits only the summary", () => {
+  const { out } = captureExit(() => runCli(makeConfig({ withMetrics: true }), ["balance", "4", "100", "--json"]));
+  const o = JSON.parse(out.join("\n"));
+  assertStrictEquals(o.seeds, 4);
+  assert(out.join("\n").indexOf("row one") === -1, "rows are suppressed in --json mode");
+});
+
+Deno.test("cli: fuzz --json reports ok and exits 1 on failure", () => {
+  const clean = captureExit(() => runCli(makeConfig({ withInvariants: true }), ["fuzz", "2", "10", "--json"]));
+  assertStrictEquals(JSON.parse(clean.out.join("\n")).ok, true);
+  const broken = captureExit(() => runCli(makeConfig({ nanAt: 1 }), ["fuzz", "2", "10", "--json"]));
+  assertStrictEquals(broken.code, 1);
+  const o = JSON.parse(broken.out.join("\n"));
+  assertStrictEquals(o.ok, false);
+  assert(o.failures.length > 0);
+});
+
+Deno.test("cli: assert --json carries the per-assert results", () => {
+  const { code, out } = captureExit(() => runCli(makeConfig({ withAsserts: "fail" }), ["assert", "--json"]));
+  assertStrictEquals(code, 1);
+  const o = JSON.parse(out.join("\n"));
+  assertStrictEquals(o.ok, false);
+  assert(o.asserts.some((r: { name: string; ok: boolean }) => r.name === "conditional" && !r.ok));
+});
+
 Deno.test("cli: unknown command prints usage", () => {
   const { out } = captureExit(() => runCli(makeConfig(), ["frobnicate"]));
   assert(out.join("\n").includes("Usage: simharness"));
