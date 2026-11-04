@@ -59,3 +59,5 @@ jobs:
             dist/*.tar.gz
             dist/*.zip
           generate_release_notes: true
+          # A hyphenated tag (v0.0.0-alpha.1, -beta, -rc) is a semver pre-release.
+          prerelease: ${{ contains(github.ref_name, '-') }}
