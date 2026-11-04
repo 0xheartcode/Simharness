@@ -47,3 +47,34 @@ export const strategies: Record<string, Strategy> = {
     press: Math.random() < 0.12 ? [pick(["e", "q", "f", "b", "r", "g", " "])] : undefined,
   }),
 };
+
+/** An ability a composed strategy presses off cooldown. */
+export interface AbilitySpec<TExtra extends Record<string, unknown> = Record<string, unknown>> {
+  /** Key to press (edge-triggered) when off cooldown. */
+  key: string;
+  /** Press once every N ticks (the cooldown). */
+  everyTicks: number;
+  /** Tick offset, so several abilities need not all fire on the same tick. */
+  offset?: number;
+  /** Only fire when this holds (e.g. an enemy is in range). */
+  when?: (s: GameState<TExtra>) => boolean;
+}
+
+/**
+ * Compose a base strategy with declared abilities fired off cooldown, replacing
+ * magic-number tick-modulo keypress math. The ability keys merge into `press`.
+ */
+export function withAbilities<TExtra extends Record<string, unknown> = Record<string, unknown>>(
+  base: Strategy<TExtra>,
+  abilities: readonly AbilitySpec<TExtra>[],
+): Strategy<TExtra> {
+  return (s, a) => {
+    const inp = base(s, a);
+    const press = [...(inp.press ?? [])];
+    for (const ab of abilities) {
+      const rel = s.tick - (ab.offset ?? 0);
+      if (ab.everyTicks > 0 && rel >= 0 && rel % ab.everyTicks === 0 && (!ab.when || ab.when(s))) press.push(ab.key);
+    }
+    return press.length ? { ...inp, press } : inp;
+  };
+}
