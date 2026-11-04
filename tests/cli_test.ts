@@ -150,6 +150,50 @@ Deno.test("cli: unknown command prints usage", () => {
   assert(out.join("\n").includes("Usage: simharness"));
 });
 
+Deno.test("cli: baseline save + balance --against gates on regression", async () => {
+  const dir = await Deno.makeTempDir({ prefix: "simharness-baseline-test-" });
+  const cwd = Deno.cwd();
+  Deno.chdir(dir);
+  try {
+    // Save a baseline from a metrics summary of {seeds:4, ticks:100}.
+    let r = captureExit(() => runCli(makeConfig({ withMetrics: true }), ["baseline", "save", "b1", "4", "100"]));
+    assert(r.out.join("\n").includes("WROTE"));
+
+    // Same inputs => identical summary => within tolerance, no exit.
+    r = captureExit(() => runCli(makeConfig({ withMetrics: true }), ["balance", "4", "100", "--against", "b1"]));
+    assertStrictEquals(r.code, null);
+    assert(r.out.join("\n").includes("OK"));
+
+    // Different seeds => the metric moves far => REGRESSED + exit 1.
+    r = captureExit(() => runCli(makeConfig({ withMetrics: true }), ["balance", "40", "100", "--against", "b1"]));
+    assertStrictEquals(r.code, 1);
+    assert(r.out.join("\n").includes("REGRESSED"));
+
+    // --json emits the diff object.
+    r = captureExit(() =>
+      runCli(makeConfig({ withMetrics: true }), ["balance", "40", "100", "--against", "b1", "--json"])
+    );
+    assertStrictEquals(JSON.parse(r.out.join("\n")).regressed, true);
+
+    // A missing baseline exits 2.
+    r = captureExit(() => runCli(makeConfig({ withMetrics: true }), ["balance", "--against", "nope"]));
+    assertStrictEquals(r.code, 2);
+    assert(r.err.join("\n").includes("baseline not found"));
+  } finally {
+    Deno.chdir(cwd);
+    await Deno.remove(dir, { recursive: true });
+  }
+});
+
+Deno.test("cli: baseline requires metrics() and the save subcommand", () => {
+  const noMetrics = captureExit(() => runCli(makeConfig(), ["baseline", "save"]));
+  assertStrictEquals(noMetrics.code, 2);
+  assert(noMetrics.err.join("\n").includes("No metrics()"));
+  const badSub = captureExit(() => runCli(makeConfig({ withMetrics: true }), ["baseline", "frobnicate"]));
+  assertStrictEquals(badSub.code, 2);
+  assert(badSub.err.join("\n").includes("usage: simharness baseline"));
+});
+
 Deno.test("cli: snap writes, then matches, then detects a change", async () => {
   const dir = await Deno.makeTempDir({ prefix: "simharness-snap-test-" });
   const cwd = Deno.cwd();

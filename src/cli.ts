@@ -11,6 +11,14 @@ import { run, type RunResult } from "./run";
 import { autoplay } from "./autoplay";
 import { fuzz } from "./fuzz";
 import { strategies } from "./strategies";
+import { diffMetrics, formatDiff } from "./baseline";
+
+const VALUE_FLAGS = new Set(["against", "tolerance"]);
+
+/** Resolve a baseline name to a file path (`<name>` -> `.simharness-baseline/<name>.json`; a path/`.json` is used as-is). */
+function baselinePath(name: string): string {
+  return name.includes("/") || name.endsWith(".json") ? name : `.simharness-baseline/${name}.json`;
+}
 
 function emit(payload: unknown): void {
   console.log(JSON.stringify(payload, null, 2));
@@ -58,9 +66,21 @@ export function runCli<TExtra extends Record<string, unknown>>(
   argv: string[] = process.argv.slice(2),
 ): void {
   const a = config.createAdapter();
-  const pos = argv.filter((x) => !x.startsWith("--"));
-  const flags = new Set(argv.filter((x) => x.startsWith("--")));
-  const json = flags.has("--json");
+  const pos: string[] = [];
+  const flags: Record<string, string | true> = {};
+  for (let i = 0; i < argv.length; i++) {
+    const tkn = argv[i];
+    if (!tkn.startsWith("--")) {
+      pos.push(tkn);
+      continue;
+    }
+    const eq = tkn.indexOf("=");
+    const key = tkn.slice(2, eq >= 0 ? eq : undefined);
+    if (eq >= 0) flags[key] = tkn.slice(eq + 1);
+    else if (VALUE_FLAGS.has(key) && argv[i + 1] !== undefined && !argv[i + 1].startsWith("--")) flags[key] = argv[++i];
+    else flags[key] = true;
+  }
+  const json = flags.json === true;
   const cmd = pos[0] ?? "help";
   const num = (i: number, d: number): number => (pos[i] !== undefined ? +pos[i] : d);
   const stage = (seed: number): void => {
@@ -139,13 +159,44 @@ export function runCli<TExtra extends Record<string, unknown>>(
       process.exit(ok ? 0 : 1);
       break; // unreachable (process.exit does not return); satisfies no-fallthrough
     }
+    case "baseline": {
+      if (!config.metrics) {
+        console.error("No metrics() in simharness.config");
+        process.exit(2);
+      }
+      if (pos[1] !== "save") {
+        console.error("usage: simharness baseline save [name] [seeds] [ticks]");
+        process.exit(2);
+      }
+      const m = config.metrics(a, { seeds: num(3, 8), ticks: num(4, 60 * 80) });
+      const file = baselinePath(pos[2] ?? "default");
+      const slash = file.lastIndexOf("/");
+      if (slash > 0) mkdirSync(file.slice(0, slash), { recursive: true });
+      writeFileSync(file, JSON.stringify(m.summary, null, 2) + "\n");
+      if (json) emit({ saved: file, summary: m.summary });
+      else console.log(`baseline: WROTE ${file}`);
+      break;
+    }
     case "balance": {
       if (!config.metrics) {
         console.error("No metrics() in simharness.config");
         process.exit(2);
       }
       const m = config.metrics(a, { seeds: num(1, 8), ticks: num(2, 60 * 80) });
-      if (json) {
+      const against = flags.against;
+      if (typeof against === "string") {
+        const file = baselinePath(against);
+        if (!existsSync(file)) {
+          console.error(`baseline not found: ${file} (create it with 'baseline save')`);
+          process.exit(2);
+        }
+        const base = JSON.parse(readFileSync(file, "utf8")) as Record<string, unknown>;
+        const tol = typeof flags.tolerance === "string" ? +flags.tolerance : 10;
+        const diff = diffMetrics(base, m.summary, tol);
+        if (json) emit(diff);
+        else formatDiff(diff).forEach((l) => console.log(l));
+        if (diff.regressed) process.exit(1);
+      } else if (json) {
         emit(m.summary);
       } else {
         console.log(JSON.stringify(m.summary, null, 2));
@@ -184,7 +235,9 @@ Usage: simharness <cmd> [--json]   (needs a simharness.config.ts in the cwd)
   fuzz [seeds] [ticks]              random inputs, assert invariants (CI gate)
   assert                            project assertions (CI gate)
   balance [seeds] [ticks]           project balance metrics
+  balance --against <name> [--tolerance <pct>]   diff metrics vs a saved baseline (CI gate)
+  baseline save [name] [seeds] [ticks]           save current metrics as a baseline
   snap <seed>                       write/diff an ASCII snapshot (regression)
-  --json                            machine-readable output (run/autoplay/fuzz/assert/balance)`);
+  --json                            machine-readable output (run/autoplay/fuzz/assert/balance/baseline)`);
   }
 }

@@ -1,5 +1,6 @@
 node_modules/
 .simharness-snap/
+.simharness-baseline/
 *.log
 .DS_Store
 
