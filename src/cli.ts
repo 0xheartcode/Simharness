@@ -166,6 +166,30 @@ export function runCli<TExtra extends Record<string, unknown>>(
       if (!res.ok) process.exit(1);
       break;
     }
+    case "check": {
+      if (!config.invariants) {
+        console.error("No invariants() in simharness.config");
+        process.exit(2);
+      }
+      const seeds = num(1, 8), ticks = num(2, 600);
+      const breaks: string[] = [];
+      for (let i = 0; i < seeds; i++) {
+        const r = run(a, {
+          seed: i,
+          ticks,
+          timeline: (_t, s) => strategies.aggressive(s, a),
+          invariants: config.invariants,
+        });
+        r.invariantBreaks.forEach((m) => breaks.push(`seed ${i}: ${m}`));
+      }
+      if (json) emit({ ok: breaks.length === 0, seeds, ticks, breaks });
+      else if (breaks.length) {
+        console.error("INVARIANT BREAKS:");
+        breaks.forEach((b) => console.error("  " + b));
+      } else console.log(`invariants OK: held across ${seeds} seeds x ${ticks} ticks`);
+      if (breaks.length) process.exit(1);
+      break;
+    }
     case "assert": {
       if (!config.asserts) {
         console.error("No asserts() in simharness.config");
@@ -256,6 +280,7 @@ Usage: simharness <cmd> [--json]   (needs a simharness.config.ts in the cwd)
   ascii <seed>                      staged scene -> ASCII board snapshot
   autoplay <seed> [ticks] [strat]   strat = a built-in or a config strategy
   fuzz [seeds] [ticks]              random inputs, assert invariants (CI gate)
+  check [seeds] [ticks]             invariants across seeds on the deterministic policy (CI gate)
   assert                            project assertions (CI gate)
   balance [seeds] [ticks]           project balance metrics
   balance --against <name> [--tolerance <pct>]   diff metrics vs a saved baseline (CI gate)

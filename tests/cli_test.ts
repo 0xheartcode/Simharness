@@ -80,6 +80,31 @@ Deno.test("cli: fuzz fails and exits 1 when an invariant breaks", () => {
   assert(err.join("\n").includes("FUZZ FAILURES"));
 });
 
+Deno.test("cli: check passes when invariants hold across seeds", () => {
+  const { code, out } = captureExit(() => runCli(makeConfig({ withInvariants: true }), ["check", "3", "20"]));
+  assertStrictEquals(code, null);
+  assert(out.join("\n").includes("invariants OK"));
+});
+
+Deno.test("cli: check exits 1 and lists the breaking seeds", () => {
+  const { code, err } = captureExit(() => runCli(makeConfig({ invariantBreak: true }), ["check", "3", "20"]));
+  assertStrictEquals(code, 1);
+  const text = err.join("\n");
+  assert(text.includes("INVARIANT BREAKS"));
+  assert(text.includes("seed 0"));
+});
+
+Deno.test("cli: check exits 2 without invariants()", () => {
+  const { code, err } = captureExit(() => runCli(makeConfig(), ["check"]));
+  assertStrictEquals(code, 2);
+  assert(err.join("\n").includes("No invariants()"));
+});
+
+Deno.test("cli: check --json reports ok", () => {
+  const { out } = captureExit(() => runCli(makeConfig({ withInvariants: true }), ["check", "2", "10", "--json"]));
+  assertStrictEquals(JSON.parse(out.join("\n")).ok, true);
+});
+
 Deno.test("cli: assert exits 0 when all pass", () => {
   const { code, out } = captureExit(() => runCli(makeConfig({ withAsserts: "pass" }), ["assert"]));
   assertStrictEquals(code, 0);
