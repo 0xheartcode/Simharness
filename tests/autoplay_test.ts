@@ -7,7 +7,7 @@ Deno.test("autoplay: plays a run under the named strategy", () => {
   const a = new MockAdapter({ killOnFire: true, enemies: 3 });
   const r = autoplay(a, { seed: 1, ticks: 50, strategy: "aggressive" });
   // aggressive holds fire whenever an enemy exists, so killOnFire clears them.
-  assertStrictEquals(r.final.enemies.length, 0);
+  assertStrictEquals((r.final.enemies ?? []).length, 0);
   assert(r.final.extra.fired > 0);
 });
 

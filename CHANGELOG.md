@@ -31,6 +31,11 @@ Consumer-feedback round: features and fixes from three downstream integrations, 
 - **Composable strategies**: `withAbilities(base, abilities)` fires declared abilities off cooldown.
 - **Fuzz as insight**: `fuzz()` returns a structured `FuzzResult` with per-failure first-repro tick and final-phase
   coverage; `FuzzOpts.seedBase`.
+- **Genre-agnostic core + action-first seam.** `hero` and `enemies` are now optional, so a non-spatial sim needs
+  neither. A new optional discrete-action seam, `SimAdapter.availableActions()` / `act(id)`, lets management / economy /
+  turn-based sims express an action space; `fuzz` then samples that space and reports per-action coverage, and `run`
+  drives it through `RunOpts.actionPolicy` (`randomActionPolicy` provided). `check` command: a deterministic multi-seed
+  invariant gate.
 
 ### Changed
 

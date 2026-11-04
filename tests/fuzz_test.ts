@@ -10,6 +10,7 @@ Deno.test("fuzz: clean adapter reports ok with phase coverage", () => {
   // every seed stayed 'running' for the full 20 ticks => coverage reflects it
   assertStrictEquals(res.coverage.phases.running, 5);
   assertStrictEquals(res.coverage.maxTick, 20);
+  assertStrictEquals(res.coverage.actions, undefined, "no action coverage for a movement-driven adapter");
 });
 
 Deno.test("fuzz: catches a NaN hero hp and records the first failing tick", () => {

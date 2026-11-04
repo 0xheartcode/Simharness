@@ -7,10 +7,11 @@ import type { GameState, Strategy } from "./adapter";
 export type { Strategy };
 
 function nearest(s: GameState): { x: number; y: number } | null {
-  if (!s.hero || !s.enemies.length) return null;
-  let b = s.enemies[0];
+  const enemies = s.enemies ?? [];
+  if (!s.hero || !enemies.length) return null;
+  let b = enemies[0];
   let bd = Infinity;
-  for (const e of s.enemies) {
+  for (const e of enemies) {
     const d = (e.x - s.hero.x) ** 2 + (e.y - s.hero.y) ** 2;
     if (d < bd) {
       bd = d;

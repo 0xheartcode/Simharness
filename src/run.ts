@@ -15,6 +15,8 @@ export interface RunOpts<
   noReset?: boolean; // keep a staged state (metrics/assert set up before running)
   stopOnEnd?: boolean; // default true
   timeline?: (t: number, s: GameState<TExtra>, a: SimAdapter<TExtra, TConfig>) => InputState | void;
+  /** Pick a discrete action to apply each tick via adapter.act (the non-spatial counterpart to timeline). */
+  actionPolicy?: (t: number, s: GameState<TExtra>, a: SimAdapter<TExtra, TConfig>) => string | void;
   /** Stop the run as soon as this returns true (checked after each step). */
   stopWhen?: (s: GameState<TExtra>) => boolean;
   /** Enforce invariants on this deterministic run; each returned message is recorded (deduped). */
@@ -44,6 +46,8 @@ export function run<
     const s = a.readState();
     const inp = o.timeline?.(t, s, a);
     if (inp) a.setInput(inp);
+    const action = o.actionPolicy?.(t, s, a);
+    if (action && a.act) a.act(action);
     a.step(dt);
     const now = a.readState();
     derive(prev, now, t, events);
@@ -61,12 +65,10 @@ function derive<TExtra extends Record<string, unknown>>(
   t: number,
   ev: SimEvent[],
 ): void {
-  if (n.enemies.length < p.enemies.length) {
-    ev.push({
-      tick: t,
-      type: "clear",
-      detail: `-${p.enemies.length - n.enemies.length} enemies (${n.enemies.length})`,
-    });
+  const ne = n.enemies ?? [];
+  const pe = p.enemies ?? [];
+  if (ne.length < pe.length) {
+    ev.push({ tick: t, type: "clear", detail: `-${pe.length - ne.length} enemies (${ne.length})` });
   }
   if (n.hero?.down && !p.hero?.down) ev.push({ tick: t, type: "hero-down" });
   if (n.phase !== p.phase) ev.push({ tick: t, type: "phase", detail: n.phase });

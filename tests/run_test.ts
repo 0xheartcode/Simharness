@@ -32,7 +32,7 @@ Deno.test("run: derives a 'clear' event when the enemy count drops", () => {
   const r = run(a, { seed: 1, ticks: 3, stopOnEnd: false, timeline: () => ({ fire: true }) });
   const clears = r.events.filter((e) => e.type === "clear");
   assertStrictEquals(clears.length, 3);
-  assertStrictEquals(r.final.enemies.length, 0);
+  assertStrictEquals((r.final.enemies ?? []).length, 0);
 });
 
 Deno.test("run: derives a 'hero-down' event on the transition to down", () => {
@@ -54,7 +54,7 @@ Deno.test("run: noReset keeps a pre-staged state", () => {
   a.reset(1);
   a.debug("clear"); // stage: remove all enemies before the run
   const r = run(a, { seed: 99, ticks: 2, noReset: true, stopOnEnd: false });
-  assertStrictEquals(r.final.enemies.length, 0, "noReset should not re-seed the adapter");
+  assertStrictEquals((r.final.enemies ?? []).length, 0, "noReset should not re-seed the adapter");
 });
 
 Deno.test("run: stopWhen halts as soon as the predicate holds", () => {

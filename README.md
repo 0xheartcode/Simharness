@@ -80,6 +80,19 @@ interface SimAdapter<TExtra> {
 harness never reads but your asserts, metrics, and invariants do. See `examples/chase` for a complete adapter and
 config.
 
+## Beyond action games
+
+`hero`, `enemies` and `InputState` (move / aim / fire / keys) are the batteries for real-time action games, and the
+built-in strategies and the `fuzz` input generator use them. They are all optional. A non-realtime sim (management,
+economy, turn-based) omits them and exposes a discrete action space instead:
+
+- `availableActions(): string[]` returns the currently legal action ids.
+- `act(id): void` applies one.
+
+With that seam `fuzz` samples your real action space and reports per-action coverage, instead of perturbing movement
+your sim ignores, and a run drives it through `actionPolicy` (see `randomActionPolicy`). A sim that drives its own
+agents can also just be stepped with no input: call `run` with no `timeline` or `actionPolicy` and read state each tick.
+
 ## Development: the walls
 
 We encode best practices as deterministic checks and loop until green. `make check` is the single gate, and CI runs

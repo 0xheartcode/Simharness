@@ -38,7 +38,7 @@ function runPayload<T extends Record<string, unknown>>(seed: number, r: RunResul
   const f = r.final;
   return {
     seed,
-    final: { tick: f.tick, phase: f.phase, hero: f.hero, enemies: f.enemies.length, extra: f.extra },
+    final: { tick: f.tick, phase: f.phase, hero: f.hero, enemies: (f.enemies ?? []).length, extra: f.extra },
     events: r.events,
     invariantBreaks: r.invariantBreaks,
   };
@@ -56,7 +56,7 @@ function printRun<T extends Record<string, unknown>>(
         tick: f.tick,
         phase: f.phase,
         hero: f.hero,
-        enemies: f.enemies.length,
+        enemies: (f.enemies ?? []).length,
         ...(f.extra as Record<string, unknown>),
       },
       null,

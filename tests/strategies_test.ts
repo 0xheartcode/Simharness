@@ -67,7 +67,7 @@ Deno.test("withAbilities: fires declared abilities off cooldown and merges into 
 
 Deno.test("withAbilities: 'when' gates an ability", () => {
   const s = withAbilities(strategies.idle, [
-    { key: "ult", everyTicks: 1, when: (st) => st.enemies.length >= 2 },
+    { key: "ult", everyTicks: 1, when: (st) => (st.enemies ?? []).length >= 2 },
   ]);
   assertStrictEquals(s(state({ x: 0, y: 0 }, [{ x: 1, y: 1 }], 0), a).press, undefined); // 1 enemy: gated off
   assertEquals(s(state({ x: 0, y: 0 }, [{ x: 1, y: 1 }, { x: 2, y: 2 }], 0), a).press, ["ult"]);

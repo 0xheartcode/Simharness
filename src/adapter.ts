@@ -43,8 +43,8 @@ export interface EntityState {
 export interface GameState<TExtra extends Record<string, unknown> = Record<string, unknown>> {
   tick: number;
   phase: string; // "running" means the run is live; anything else ends it
-  hero?: HeroState;
-  enemies: EntityState[];
+  hero?: HeroState; // action games only; omit for non-spatial sims
+  enemies?: EntityState[]; // action games only; omit for non-spatial sims
   extra: TExtra;
 }
 
@@ -61,6 +61,14 @@ export interface SimAdapter<
   snapshotAscii(): string;
   /** Optional: stage a situation for tests/metrics (e.g. open a door, spawn a wave, advance a phase). */
   debug?(action: string, arg?: unknown): void;
+  /**
+   * Optional discrete-action seam for non-realtime games (management, economy,
+   * turn-based). Return the currently legal action ids; `act` applies one. When
+   * present, `fuzz` samples this action space instead of move/fire, and a run's
+   * `actionPolicy` drives it. Omit for games driven purely through `setInput`.
+   */
+  availableActions?(): readonly string[];
+  act?(action: string): void;
 }
 
 export type SimEvent = { tick: number; type: string; detail?: string };

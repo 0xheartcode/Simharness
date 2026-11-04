@@ -107,3 +107,44 @@ export class MockAdapter implements SimAdapter<MockExtra> {
     return this.lastConfig;
   }
 }
+
+export interface ActionMockExtra extends Record<string, unknown> {
+  acted: Record<string, number>;
+}
+
+/**
+ * A non-spatial, action-driven adapter: no hero, no enemies. It exposes a
+ * discrete action space (craft/sell/wait) and records what was applied, so the
+ * action seam, the loosened core (optional enemies), and the sim-drives-itself
+ * mode can all be tested.
+ */
+export class ActionMockAdapter implements SimAdapter<ActionMockExtra> {
+  readonly name = "action-mock";
+  private t = 0;
+  private phase = "running";
+  private acted: Record<string, number> = {};
+
+  reset(_seed: number): void {
+    this.t = 0;
+    this.phase = "running";
+    this.acted = {};
+  }
+  step(_dt: number): void {
+    if (this.phase !== "running") return;
+    this.t++;
+    if (this.t >= 50) this.phase = "over";
+  }
+  setInput(): void {} // unused: this sim is action-driven
+  availableActions(): readonly string[] {
+    return this.phase === "running" ? ["craft", "sell", "wait"] : [];
+  }
+  act(action: string): void {
+    this.acted[action] = (this.acted[action] ?? 0) + 1;
+  }
+  readState(): GameState<ActionMockExtra> {
+    return { tick: this.t, phase: this.phase, extra: { acted: { ...this.acted } } };
+  }
+  snapshotAscii(): string {
+    return `action-mock tick ${this.t} phase ${this.phase}`;
+  }
+}
