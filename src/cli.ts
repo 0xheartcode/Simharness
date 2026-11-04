@@ -7,8 +7,7 @@
 // and suppresses the human text (for run / autoplay / balance / fuzz).
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import type { SimharnessConfig } from "./config";
-import type { GameState, SimEvent } from "./adapter";
-import { run } from "./run";
+import { run, type RunResult } from "./run";
 import { autoplay } from "./autoplay";
 import { fuzz } from "./fuzz";
 import { strategies } from "./strategies";
@@ -17,18 +16,19 @@ function emit(payload: unknown): void {
   console.log(JSON.stringify(payload, null, 2));
 }
 
-function runPayload<T extends Record<string, unknown>>(seed: number, r: { final: GameState<T>; events: SimEvent[] }) {
+function runPayload<T extends Record<string, unknown>>(seed: number, r: RunResult<T>) {
   const f = r.final;
   return {
     seed,
     final: { tick: f.tick, phase: f.phase, hero: f.hero, enemies: f.enemies.length, extra: f.extra },
     events: r.events,
+    invariantBreaks: r.invariantBreaks,
   };
 }
 
 function printRun<T extends Record<string, unknown>>(
   seed: number,
-  r: { final: GameState<T>; events: SimEvent[] },
+  r: RunResult<T>,
 ): void {
   const f = r.final;
   console.log(
@@ -47,6 +47,10 @@ function printRun<T extends Record<string, unknown>>(
   );
   console.log("events (last 12):");
   for (const e of r.events.slice(-12)) console.log(`  t${e.tick}  ${e.type}  ${e.detail ?? ""}`);
+  if (r.invariantBreaks.length) {
+    console.error(`INVARIANT BREAKS (${r.invariantBreaks.length}):`);
+    r.invariantBreaks.forEach((m) => console.error("  " + m));
+  }
 }
 
 export function runCli<TExtra extends Record<string, unknown>>(
@@ -70,9 +74,15 @@ export function runCli<TExtra extends Record<string, unknown>>(
   switch (cmd) {
     case "run": {
       const seed = num(1, 1);
-      const r = run(a, { seed, ticks: num(2, 600), timeline: (_t, s) => strategies.aggressive(s, a) });
+      const r = run(a, {
+        seed,
+        ticks: num(2, 600),
+        timeline: (_t, s) => strategies.aggressive(s, a),
+        invariants: config.invariants,
+      });
       if (json) emit(runPayload(seed, r));
       else printRun(seed, r);
+      if (r.invariantBreaks.length) process.exit(1);
       break;
     }
     case "ascii":
@@ -82,9 +92,16 @@ export function runCli<TExtra extends Record<string, unknown>>(
     case "autoplay": {
       const seed = num(1, 1);
       try {
-        const r = autoplay(a, { seed, ticks: num(2, 2000), strategy: pos[3], strategies: config.strategies });
+        const r = autoplay(a, {
+          seed,
+          ticks: num(2, 2000),
+          strategy: pos[3],
+          strategies: config.strategies,
+          invariants: config.invariants,
+        });
         if (json) emit(runPayload(seed, r));
         else printRun(seed, r);
+        if (r.invariantBreaks.length) process.exit(1);
       } catch (e) {
         if (json) emit({ error: (e as Error).message });
         else console.error((e as Error).message);

@@ -51,6 +51,29 @@ Deno.test("run: noReset keeps a pre-staged state", () => {
   assertStrictEquals(r.final.enemies.length, 0, "noReset should not re-seed the adapter");
 });
 
+Deno.test("run: stopWhen halts as soon as the predicate holds", () => {
+  const a = new MockAdapter();
+  const r = run(a, { seed: 1, ticks: 100, stopOnEnd: false, stopWhen: (s) => s.tick >= 5 });
+  assertStrictEquals(r.final.tick, 5);
+});
+
+Deno.test("run: records invariant breaks (deduped) without throwing", () => {
+  const a = new MockAdapter();
+  const r = run(a, {
+    seed: 1,
+    ticks: 4,
+    stopOnEnd: false,
+    invariants: (s) => (s.tick > 1 ? ["tick too high"] : []),
+  });
+  assert(r.invariantBreaks.length >= 1, "a break is recorded");
+  assert(r.invariantBreaks.every((m) => m.includes("tick too high")));
+});
+
+Deno.test("run: no invariants => empty invariantBreaks", () => {
+  const r = run(new MockAdapter(), { seed: 1, ticks: 3, stopOnEnd: false });
+  assertEquals(r.invariantBreaks, []);
+});
+
 Deno.test("run: timeline receives tick, state and adapter", () => {
   const a = new MockAdapter();
   const seenTicks: number[] = [];

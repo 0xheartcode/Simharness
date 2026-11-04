@@ -7,6 +7,7 @@ interface CfgOpts extends MockOpts {
   withAsserts?: "pass" | "fail";
   withMetrics?: boolean;
   withInvariants?: boolean;
+  invariantBreak?: boolean;
 }
 
 function makeConfig(o: CfgOpts = {}): SimharnessConfig<MockExtra> {
@@ -20,7 +21,7 @@ function makeConfig(o: CfgOpts = {}): SimharnessConfig<MockExtra> {
   if (o.withMetrics) {
     cfg.metrics = (_a, opts) => ({ summary: { seeds: opts.seeds, ticks: opts.ticks }, rows: ["row one", "row two"] });
   }
-  if (o.withInvariants) cfg.invariants = () => [];
+  if (o.withInvariants || o.invariantBreak) cfg.invariants = () => (o.invariantBreak ? ["mock invariant broke"] : []);
   return cfg;
 }
 
@@ -34,6 +35,12 @@ Deno.test("cli: run prints final state and events", () => {
   const text = out.join("\n");
   assert(text.includes('"seed": 7'));
   assert(text.includes("events (last 12)"));
+});
+
+Deno.test("cli: run exits 1 when an invariant breaks on the deterministic run", () => {
+  const { code, err } = captureExit(() => runCli(makeConfig({ endAt: 5, invariantBreak: true }), ["run", "1", "20"]));
+  assertStrictEquals(code, 1);
+  assert(err.join("\n").includes("INVARIANT BREAKS"));
 });
 
 Deno.test("cli: ascii prints a board snapshot", () => {

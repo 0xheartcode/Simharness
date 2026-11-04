@@ -1,7 +1,7 @@
 // Autoplayer: play a full seeded run under a strategy (the "GM").
 import { run, type RunResult } from "./run";
 import { strategies } from "./strategies";
-import type { SimAdapter, Strategy } from "./adapter";
+import type { GameState, SimAdapter, Strategy } from "./adapter";
 
 export interface AutoplayOpts<TExtra extends Record<string, unknown> = Record<string, unknown>> {
   seed: number;
@@ -10,6 +10,8 @@ export interface AutoplayOpts<TExtra extends Record<string, unknown> = Record<st
   strategy?: string;
   /** Extra named strategies (e.g. a project's `config.strategies`), merged over the built-ins. */
   strategies?: Record<string, Strategy<TExtra>>;
+  /** Enforce invariants on this run (recorded in `RunResult.invariantBreaks`). */
+  invariants?: (s: GameState<TExtra>) => string[];
 }
 
 /**
@@ -37,5 +39,5 @@ export function autoplay<TExtra extends Record<string, unknown>>(
   o: AutoplayOpts<TExtra>,
 ): RunResult<TExtra> {
   const strat = resolveStrategy<TExtra>(o.strategy ?? "aggressive", o.strategies);
-  return run(a, { seed: o.seed, ticks: o.ticks, timeline: (_t, s) => strat(s, a) });
+  return run(a, { seed: o.seed, ticks: o.ticks, timeline: (_t, s) => strat(s, a), invariants: o.invariants });
 }
