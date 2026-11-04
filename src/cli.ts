@@ -150,16 +150,20 @@ export function runCli<TExtra extends Record<string, unknown>>(
     }
     case "fuzz": {
       const seeds = num(1, 20), ticks = num(2, 600);
-      const f = fuzz(a, { seeds, ticks, invariants: config.invariants });
+      const res = fuzz(a, { seeds, ticks, invariants: config.invariants });
       if (json) {
-        emit({ ok: f.length === 0, seeds, ticks, failures: f });
-      } else if (f.length) {
+        emit(res);
+      } else if (!res.ok) {
         console.error("FUZZ FAILURES:");
-        f.forEach((x) => console.error("  " + x));
+        res.failures.forEach((x) => console.error(`  seed ${x.seed} @t${x.tick}: ${x.message}`));
       } else {
-        console.log(`fuzz OK: ${seeds} seeds x ${ticks} ticks, no invariant broke`);
+        console.log(
+          `fuzz OK: ${seeds} seeds x ${ticks} ticks, no invariant broke (phases: ${
+            JSON.stringify(res.coverage.phases)
+          })`,
+        );
       }
-      if (f.length) process.exit(1);
+      if (!res.ok) process.exit(1);
       break;
     }
     case "assert": {
