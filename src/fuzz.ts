@@ -3,10 +3,11 @@
 // exposes a discrete-action seam (availableActions/act) it samples the real
 // action space instead, so fuzz is meaningful off the movement path. Reports
 // coverage (final-phase distribution, tick spread, action counts) and, per
-// failure, the earliest tick it reproduces at.
+// failure, the earliest tick it reproduces at plus (action mode) a shrunk
+// minimal action trace.
 import { run } from "./run";
 import { strategies } from "./strategies";
-import { randomActionPolicy } from "./actions";
+import { randomActionPolicy, shrinkActionTrace } from "./actions";
 import { createRng } from "./determinism";
 import type { GameState, SimAdapter } from "./adapter";
 
@@ -24,6 +25,8 @@ export interface FuzzFailure {
   message: string;
   /** Earliest tick the failure reproduces at (minimal tick budget); -1 for a thrown step(). */
   tick: number;
+  /** Action mode only: a shrunk minimal action trace that still reproduces the failure. */
+  minTrace?: string[];
 }
 
 export interface FuzzResult {
@@ -47,6 +50,19 @@ export function fuzz<TExtra extends Record<string, unknown>>(
   let minTick = Infinity;
   let maxTick = 0;
 
+  const detect = (s: GameState<TExtra>): string[] => {
+    const msgs: string[] = [];
+    if (s.hero && Number.isNaN(s.hero.hp as number)) msgs.push("NaN hero hp");
+    if (s.hero && (Number.isNaN(s.hero.x) || Number.isNaN(s.hero.y))) msgs.push("NaN hero pos");
+    for (const e of s.enemies ?? []) {
+      if (Number.isNaN(e.x) || Number.isNaN(e.y)) {
+        msgs.push("NaN enemy pos");
+        break;
+      }
+    }
+    if (o.invariants) msgs.push(...o.invariants(s));
+    return msgs;
+  };
   const record = (seed: number, message: string, tick: number): void => {
     const key = `${seed}:${message}`;
     if (seen.has(key)) return; // keep the earliest tick only
@@ -54,14 +70,12 @@ export function fuzz<TExtra extends Record<string, unknown>>(
     failures.push({ seed, message, tick });
   };
   const check = (s: GameState<TExtra>, seed: number, tick: number): void => {
-    if (s.hero && Number.isNaN(s.hero.hp as number)) record(seed, "NaN hero hp", tick);
-    if (s.hero && (Number.isNaN(s.hero.x) || Number.isNaN(s.hero.y))) record(seed, "NaN hero pos", tick);
-    for (const e of s.enemies ?? []) if (Number.isNaN(e.x) || Number.isNaN(e.y)) record(seed, "NaN enemy pos", tick);
-    o.invariants?.(s).forEach((m) => record(seed, m, tick));
+    for (const m of detect(s)) record(seed, m, tick);
   };
 
   for (let i = 0; i < o.seeds; i++) {
     const seed = (o.seedBase ?? 1000) + i * 7;
+    const trace: string[] = [];
     try {
       if (actionMode) {
         const policy = randomActionPolicy<TExtra>(createRng(seed));
@@ -73,6 +87,7 @@ export function fuzz<TExtra extends Record<string, unknown>>(
             check(s, seed, t);
             const act = policy(t, s, aa);
             if (act) actionCounts[act] = (actionCounts[act] ?? 0) + 1;
+            trace.push(act ?? "");
             return act;
           },
         });
@@ -92,6 +107,10 @@ export function fuzz<TExtra extends Record<string, unknown>>(
       phases[final.phase] = (phases[final.phase] ?? 0) + 1;
       minTick = Math.min(minTick, final.tick);
       maxTick = Math.max(maxTick, final.tick);
+      if (actionMode) {
+        const f = failures.find((x) => x.seed === seed && x.tick >= 0 && !x.minTrace);
+        if (f) f.minTrace = shrinkActionTrace(a, seed, trace, detect, f.message);
+      }
     } catch (e) {
       record(seed, `threw ${(e as Error).message}`, -1);
     }
