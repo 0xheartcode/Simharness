@@ -18,7 +18,7 @@ one interface (`SimAdapter`) and gets:
 It is deliberately _not_ tied to any one game: the harness is the reusable core, and each project ships a small adapter
 and config.
 
-> **Status:** `0.0.0-alpha.0`. Deno-native core, self-contained `deno compile` binary, and deterministic walls
+> **Status:** `0.0.0-alpha.1`. Deno-native core, self-contained `deno compile` binary, and deterministic walls
 > (`make check`: fmt, lint, typecheck, layering, version-sync, tests, and a 95% coverage floor, currently over 98%). The
 > `SimAdapter` contract may still shift on the alpha line; it freezes at `0.1.0`.
 
