@@ -1,6 +1,6 @@
 import { runCli } from "@0xheartcode/simharness/cli";
 import type { SimharnessConfig } from "@0xheartcode/simharness/config";
-import { MockAdapter, type MockExtra, type MockOpts } from "./mock_adapter.ts";
+import { ActionMockAdapter, type ActionMockExtra, MockAdapter, type MockExtra, type MockOpts } from "./mock_adapter.ts";
 import { assert, assertEquals, assertStrictEquals, captureExit } from "./assert.ts";
 
 interface CfgOpts extends MockOpts {
@@ -168,6 +168,14 @@ Deno.test("cli: assert --json carries the per-assert results", () => {
   const o = JSON.parse(out.join("\n"));
   assertStrictEquals(o.ok, false);
   assert(o.asserts.some((r: { name: string; ok: boolean }) => r.name === "conditional" && !r.ok));
+});
+
+Deno.test("cli: autoplay drives the action seam for a non-spatial sim", () => {
+  const a = new ActionMockAdapter();
+  const cfg: SimharnessConfig<ActionMockExtra> = { createAdapter: () => a };
+  captureExit(() => runCli(cfg, ["autoplay", "1", "20"]));
+  const total = Object.values(a.readState().extra.acted).reduce((x, y) => x + y, 0);
+  assert(total > 0, "actions were applied to the action-driven adapter");
 });
 
 Deno.test("cli: --config forwards parsed JSON to the adapter reset", () => {

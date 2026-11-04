@@ -12,6 +12,9 @@ import { autoplay } from "./autoplay";
 import { fuzz } from "./fuzz";
 import { strategies } from "./strategies";
 import { diffMetrics, formatDiff } from "./baseline";
+import { randomActionPolicy } from "./actions";
+import { createRng } from "./determinism";
+import type { ActionPolicy } from "./actions";
 
 const VALUE_FLAGS = new Set(["against", "tolerance", "config"]);
 
@@ -100,6 +103,12 @@ export function runCli<TExtra extends Record<string, unknown>>(
     console.error((e as Error).message);
     process.exit(2);
   }
+  // If the adapter exposes the discrete-action seam, drive it with a seeded
+  // random policy so run/autoplay work for non-spatial sims, not just fuzz.
+  const actionDriver = (seed: number): ActionPolicy<TExtra> | undefined =>
+    typeof a.availableActions === "function" && typeof a.act === "function"
+      ? randomActionPolicy<TExtra>(createRng(seed))
+      : undefined;
   const stage = (seed: number): void => {
     if (config.stage) config.stage(a, seed);
     else {
@@ -115,6 +124,7 @@ export function runCli<TExtra extends Record<string, unknown>>(
         seed,
         ticks: num(2, 600),
         timeline: (_t, s) => strategies.aggressive(s, a),
+        actionPolicy: actionDriver(seed),
         invariants: config.invariants,
         config: runConfig,
       });
@@ -135,6 +145,7 @@ export function runCli<TExtra extends Record<string, unknown>>(
           ticks: num(2, 2000),
           strategy: pos[3],
           strategies: config.strategies,
+          actionPolicy: actionDriver(seed),
           invariants: config.invariants,
           config: runConfig,
         });

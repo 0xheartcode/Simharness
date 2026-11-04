@@ -17,6 +17,8 @@ export interface AutoplayOpts<
   invariants?: (s: GameState<TExtra>) => string[];
   /** Typed run config forwarded to `reset(seed, config)`. */
   config?: TConfig;
+  /** Drive a discrete-action sim each tick (via adapter.act), alongside the movement strategy. */
+  actionPolicy?: (t: number, s: GameState<TExtra>, a: SimAdapter<TExtra, TConfig>) => string | void;
 }
 
 /**
@@ -51,6 +53,7 @@ export function autoplay<
     seed: o.seed,
     ticks: o.ticks,
     timeline: (_t, s) => strat(s, a),
+    actionPolicy: o.actionPolicy,
     invariants: o.invariants,
     config: o.config,
   });
