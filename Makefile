@@ -20,9 +20,9 @@ DENO ?= deno
 # up as slices land; never down to pass. Actual at 0.0.0-alpha.0: 98.0%.
 COV_FLOOR ?= 95
 
-.PHONY: check fmt lint typecheck deps version test cov-gate cov cov-html compile package clean
+.PHONY: check fmt lint typecheck deps version api api-check test cov-gate cov cov-html compile package clean
 
-check: fmt lint typecheck deps version test cov-gate
+check: fmt lint typecheck deps version api-check test cov-gate
 	@echo "═══ make check: ALL WALLS GREEN ═══"
 
 fmt:
@@ -44,6 +44,14 @@ deps:
 version:
 	@echo "── version-sync (deno.json = package.json = src/version.ts) ──"
 	$(DENO) run --allow-read scripts/check_version.ts
+
+api:
+	@echo "── generate API.md from the public exports ──"
+	$(DENO) run --allow-read --allow-write scripts/gen_api.ts
+
+api-check:
+	@echo "── api-doc freshness (API.md matches the exports) ──"
+	$(DENO) run --allow-read scripts/gen_api.ts --check
 
 test:
 	@echo "── tests (with coverage) ──"

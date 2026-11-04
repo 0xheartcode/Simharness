@@ -33,7 +33,15 @@
     "lineWidth": 120,
     "semiColons": true,
     "singleQuote": false,
-    "exclude": ["coverage/", "dist/", "node_modules/", ".simharness-snap/", "pnpm-lock.yaml", "pnpm-workspace.yaml"]
+    "exclude": [
+      "coverage/",
+      "dist/",
+      "node_modules/",
+      ".simharness-snap/",
+      "pnpm-lock.yaml",
+      "pnpm-workspace.yaml",
+      "API.md"
+    ]
   },
   "lint": {
     "exclude": ["coverage/", "dist/", "node_modules/"],

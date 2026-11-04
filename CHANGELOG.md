@@ -34,8 +34,14 @@ Consumer-feedback round: features and fixes from three downstream integrations, 
 - **Genre-agnostic core + action-first seam.** `hero` and `enemies` are now optional, so a non-spatial sim needs
   neither. A new optional discrete-action seam, `SimAdapter.availableActions()` / `act(id)`, lets management / economy /
   turn-based sims express an action space; `fuzz` then samples that space and reports per-action coverage, and `run`
-  drives it through `RunOpts.actionPolicy` (`randomActionPolicy` provided). `check` command: a deterministic multi-seed
-  invariant gate.
+  drives it through `RunOpts.actionPolicy` (`randomActionPolicy` provided). The CLI's `run`/`autoplay` auto-drive the
+  seam when present. `check` command: a deterministic multi-seed invariant gate. Worked example `examples/economy` (a
+  non-spatial action-driven sim).
+- **Porcelain action policies**: `firstLegal`, `sequenceActions`, `replayActions` compose declarative action scripts
+  over the raw seam.
+- **Action-trace shrinking**: `shrinkActionTrace` reduces a failing trace to a minimal deterministic reproducer; `fuzz`
+  attaches a shrunk `minTrace` per action-mode failure.
+- **Generated API reference**: `make api` writes `API.md` from the public exports; `make check` fails if it is stale.
 
 ### Changed
 
