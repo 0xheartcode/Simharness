@@ -2,7 +2,7 @@
 // a SimharnessConfig: at minimum a factory for its SimAdapter, plus optional
 // project-specific scenario staging, assertions, balance metrics, and fuzz
 // invariants. `TExtra` ties the config's typed hooks to the adapter's state.
-import type { GameState, SimAdapter } from "./adapter";
+import type { GameState, SimAdapter, Strategy } from "./adapter";
 
 export interface AssertResult {
   name: string;
@@ -26,4 +26,6 @@ export interface SimharnessConfig<TExtra extends Record<string, unknown> = Recor
   metrics?: (a: SimAdapter<TExtra>, o: { seeds: number; ticks: number }) => MetricsReport;
   /** Project fuzz invariants: return a message per broken invariant (empty = OK). */
   invariants?: (s: GameState<TExtra>) => string[];
+  /** Named project strategies, resolvable by `autoplay <seed> <ticks> <name>` (merged over the built-ins). */
+  strategies?: Record<string, Strategy<TExtra>>;
 }

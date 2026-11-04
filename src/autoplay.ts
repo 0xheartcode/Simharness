@@ -1,12 +1,41 @@
 // Autoplayer: play a full seeded run under a strategy (the "GM").
 import { run, type RunResult } from "./run";
 import { strategies } from "./strategies";
-import type { SimAdapter } from "./adapter";
+import type { SimAdapter, Strategy } from "./adapter";
+
+export interface AutoplayOpts<TExtra extends Record<string, unknown> = Record<string, unknown>> {
+  seed: number;
+  ticks: number;
+  /** Strategy name to resolve against the built-ins + `strategies` (default "aggressive"). */
+  strategy?: string;
+  /** Extra named strategies (e.g. a project's `config.strategies`), merged over the built-ins. */
+  strategies?: Record<string, Strategy<TExtra>>;
+}
+
+/**
+ * Resolve a strategy by name against the built-ins plus any extras. Throws on an
+ * unknown name (never silently falls back) so a typo or missing project strategy
+ * is a loud error, not the wrong policy run quietly.
+ */
+export function resolveStrategy<TExtra extends Record<string, unknown>>(
+  name: string,
+  extra?: Record<string, Strategy<TExtra>>,
+): Strategy<TExtra> {
+  const all: Record<string, Strategy<TExtra>> = {
+    ...(strategies as unknown as Record<string, Strategy<TExtra>>),
+    ...(extra ?? {}),
+  };
+  const strat = all[name];
+  if (!strat) {
+    throw new Error(`unknown strategy "${name}" (available: ${Object.keys(all).sort().join(", ")})`);
+  }
+  return strat;
+}
 
 export function autoplay<TExtra extends Record<string, unknown>>(
   a: SimAdapter<TExtra>,
-  o: { seed: number; ticks: number; strategy?: string },
+  o: AutoplayOpts<TExtra>,
 ): RunResult<TExtra> {
-  const strat = strategies[o.strategy ?? "aggressive"] ?? strategies.aggressive;
+  const strat = resolveStrategy<TExtra>(o.strategy ?? "aggressive", o.strategies);
   return run(a, { seed: o.seed, ticks: o.ticks, timeline: (_t, s) => strat(s, a) });
 }

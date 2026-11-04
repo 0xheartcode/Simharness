@@ -2,7 +2,9 @@
 // only the universal core (hero + enemies), so they are game-agnostic; a project
 // that needs genre-specific behaviour (e.g. "retreat to base") registers its own
 // strategies in its config and references state via `extra`.
-import type { GameState, InputState, SimAdapter } from "./adapter";
+import type { GameState, Strategy } from "./adapter";
+
+export type { Strategy };
 
 function nearest(s: GameState): { x: number; y: number } | null {
   if (!s.hero || !s.enemies.length) return null;
@@ -24,8 +26,6 @@ function toward(tx: number, ty: number, s: GameState): { x: number; y: number } 
 }
 const here = (s: GameState): { x: number; y: number } => (s.hero ? { x: s.hero.x, y: s.hero.y } : { x: 0, y: 0 });
 const pick = <T>(a: T[]): T => a[Math.floor(Math.random() * a.length)];
-
-export type Strategy = (s: GameState, a: SimAdapter) => InputState;
 
 export const strategies: Record<string, Strategy> = {
   idle: () => ({}),

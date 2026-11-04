@@ -60,3 +60,13 @@ export interface SimAdapter<TExtra extends Record<string, unknown> = Record<stri
 }
 
 export type SimEvent = { tick: number; type: string; detail?: string };
+
+/**
+ * An autoplay policy: map observed state (and the adapter, for genre-specific
+ * reads) to the input for this tick. Lives in the contract so a consumer can
+ * declare `strategies` in its config without importing the harness tooling.
+ */
+export type Strategy<TExtra extends Record<string, unknown> = Record<string, unknown>> = (
+  s: GameState<TExtra>,
+  a: SimAdapter<TExtra>,
+) => InputState;

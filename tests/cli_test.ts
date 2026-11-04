@@ -46,6 +46,21 @@ Deno.test("cli: autoplay runs the named strategy", () => {
   assert(out.join("\n").includes('"seed": 1'));
 });
 
+Deno.test("cli: autoplay exits 1 and names the options on an unknown strategy", () => {
+  const { code, err } = captureExit(() => runCli(makeConfig(), ["autoplay", "1", "20", "nope"]));
+  assertStrictEquals(code, 1);
+  const text = err.join("\n");
+  assert(text.includes('unknown strategy "nope"'));
+  assert(text.includes("aggressive"), "lists the available built-ins");
+});
+
+Deno.test("cli: autoplay resolves a project strategy from config.strategies", () => {
+  const cfg = makeConfig();
+  cfg.strategies = { pacifist: () => ({}) };
+  const { out } = captureExit(() => runCli(cfg, ["autoplay", "1", "10", "pacifist"]));
+  assert(out.join("\n").includes('"fired": 0'), "the project strategy never fires");
+});
+
 Deno.test("cli: fuzz passes on a clean adapter (exit 0 path, no exit call)", () => {
   const { out, code } = captureExit(() => runCli(makeConfig({ withInvariants: true }), ["fuzz", "3", "10"]));
   assertStrictEquals(code, null, "a clean fuzz does not call process.exit");

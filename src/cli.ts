@@ -60,7 +60,15 @@ export function runCli<TExtra extends Record<string, unknown>>(
       console.log(a.snapshotAscii());
       break;
     case "autoplay":
-      printRun(num(1, 1), autoplay(a, { seed: num(1, 1), ticks: num(2, 2000), strategy: argv[3] ?? "aggressive" }));
+      try {
+        printRun(
+          num(1, 1),
+          autoplay(a, { seed: num(1, 1), ticks: num(2, 2000), strategy: argv[3], strategies: config.strategies }),
+        );
+      } catch (e) {
+        console.error((e as Error).message);
+        process.exit(1);
+      }
       break;
     case "fuzz": {
       const seeds = num(1, 20), ticks = num(2, 600);

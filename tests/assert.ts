@@ -16,14 +16,18 @@ export function assertStrictEquals<T>(actual: T, expected: T, msg?: string): voi
   if (actual !== expected) throw new Error(msg ?? `expected ${String(expected)}, got ${String(actual)}`);
 }
 
-export function assertThrows(fn: () => unknown, msg = "expected function to throw"): void {
-  let threw = false;
+/** Assert `fn` throws; if `msgIncludes` is given, assert the thrown message contains it. */
+export function assertThrows(fn: () => unknown, msgIncludes?: string): void {
+  let err: Error | undefined;
   try {
     fn();
-  } catch {
-    threw = true;
+  } catch (e) {
+    err = e as Error;
   }
-  if (!threw) throw new Error(msg);
+  if (!err) throw new Error(`expected function to throw${msgIncludes ? ` (${msgIncludes})` : ""}`);
+  if (msgIncludes && !err.message.includes(msgIncludes)) {
+    throw new Error(`expected thrown message to include "${msgIncludes}", got "${err.message}"`);
+  }
 }
 
 /** Capture everything written to console.log / console.error while `fn` runs. */
