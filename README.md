@@ -107,8 +107,11 @@ The engine lives under `src/engine`:
 - `core/` is the deterministic heart: a fixed-order tick loop, a virtual clock with tick-counted timeouts, one seeded
   entropy source, a fast-forward run loop with a seed-replay guarantee, and byte-stable snapshots with a structured
   diff.
-- `sim/` is the simulated environment: a multi-process cluster, a message-level network with seeded faults, and a
-  crash-aware file model.
+- `sim/` is the simulated environment: a multi-process cluster, a message-level network with seeded faults, a
+  crash-aware file model, a seeded fault scheduler that emits a replayable structured schedule, and closed-loop client
+  workloads.
+- `cli/` is the orchestrator: a `Scenario` (cluster plus workload plus invariants) driven by `run` / `replay` / `fuzz` /
+  `assert` / `snap` / `metrics`, where `fuzz` is a CI gate that exits nonzero with the offending seed.
 
 The decisions that steer this work, and the go/no-go gate that proved the contract on a real replicated system (a quorum
 key-value store) before any further build, are recorded in [`docs/adr`](docs/adr/README.md).

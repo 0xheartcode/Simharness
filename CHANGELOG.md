@@ -28,8 +28,16 @@ existing single-adapter tooling keeps working and will migrate onto the engine o
   ticking, a message-level `SimulatedNetwork` with per-link delay, drop, duplicate, partition, and clog faults over a
   delivery-tick priority queue, and a crash-aware `SimulatedFileIO` with visible/durable bytes and tick-completed
   futures.
+- **Fault injection and workloads** (`src/engine/sim`): a seeded `SimulationDecisions` scheduler that emits a
+  tick-stamped, structured, replayable fault schedule (isolate, partition, delay, drop, heal), closed-loop client
+  `Workload` issuers, and named fault profiles (quiet, latency-spike, partition-heavy, reorg-storm).
+- **Cluster CLI** (`src/engine/cli`): a `Scenario` abstraction and a `run` / `replay` / `fuzz` / `assert` / `snap` /
+  `metrics` command set over a cluster, with long-form flags, seed-first failure output, and a `fuzz` that exits nonzero
+  with the offending seed as a CI gate.
 - **Gate proof** (`examples/quorum-kv`): a quorum key-value reference system (3 replicas, W=R=2) hosted through the
   contract, with a safety invariant that holds under seeded faults and is shown to have teeth.
+- **Cluster example** (`examples/gossip-register`): a gossip last-writer-wins register as real cluster nodes, with a
+  safety invariant (adopted versions never regress) that passes for the correct node and fails for a buggy variant.
 
 ## [0.0.0-alpha.1] - 2026-11-04
 

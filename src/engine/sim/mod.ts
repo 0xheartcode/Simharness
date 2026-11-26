@@ -4,6 +4,7 @@
 
 export {
   Cluster,
+  type ControllerDeps,
   DirectNetwork,
   directNetwork,
   type Network,
@@ -15,3 +16,11 @@ export {
 } from "./cluster.ts";
 export { type LinkConfig, SimulatedNetwork, simulatedNetwork } from "./network.ts";
 export { type FileIOConfig, SimulatedFileIO, TickFuture } from "./fileio.ts";
+export {
+  type DecisionConfig,
+  type FaultInjector,
+  type FaultKind,
+  type ScheduleEntry,
+  SimulationDecisions,
+} from "./decisions.ts";
+export { FAULT_PROFILES, faultProfile, type RequestGen, Workload, type WorkloadConfig } from "./workload.ts";
