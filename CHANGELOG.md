@@ -69,10 +69,12 @@ existing single-adapter tooling keeps working and will migrate onto the engine o
   search cannot; and a byte-level channel that fragments a stream into seeded chunks ignoring frame boundaries, exposing
   a split-frame bug that whole-frame (message-level) delivery hides. Demonstrable foundations of the advanced tiers and
   of ADR-002's byte-level seam.
-- **Interleaving exploration** (`rs/simharness-explore`): a deterministic, exhaustive explorer of the interleavings of a
-  small concurrent model (the Shuttle / loom idea at its core), returning the first schedule that breaks an invariant.
-  It finds a lost-update from a non-atomic read-modify-write that a random search would usually miss, and reports none
-  when the increments are atomic. A demonstrable foundation of the interleaving tier.
+- **Interleaving exploration** (`rs/simharness-explore`): a deterministic explorer of the interleavings of a small
+  concurrent model (the Shuttle / loom idea at its core). The `dpor` module adds a **partial-order reduction** (sleep
+  sets over an independence relation: steps touching different objects, or both reads, commute), so N independent writes
+  collapse from N! interleavings to one representative while a real race (a lost update on a shared counter) is still
+  found. It also finds a lost-update from a non-atomic read-modify-write that a random search would miss, and reports
+  none when the increments are atomic.
 - **Rust orchestrator** (`rs/simharness-orchestrator`): a single static binary that drives a stdio system under test
   through protocol v0 with `run` / `replay` / `fuzz` / `snap`, a seeded action driver, and seed-first reporting. It
   checks the one property a black-box SUT can be held to without knowing its invariants: determinism (same seed gives an
