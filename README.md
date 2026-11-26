@@ -93,6 +93,26 @@ With that seam `fuzz` samples your real action space and reports per-action cove
 your sim ignores, and a run drives it through `actionPolicy` (see `randomActionPolicy`). A sim that drives its own
 agents can also just be stepped with no input: call `run` with no `timeline` or `actionPolicy` and read state each tick.
 
+## The deterministic simulation engine
+
+Simharness is growing from a single-adapter game harness into a general deterministic simulation testing (DST) harness:
+the same discipline (seed in, identical run out) extended from one simulation to a cluster of processes over a simulated
+network and disk, with client-visible histories checked for consistency. The existing single-adapter tooling keeps
+working and migrates onto the engine over time; there is one tool, not two.
+
+The engine lives under `src/engine`:
+
+- `protocol/` is the versioned orchestrator-to-adapter contract, over an in-process or a stdio (JSON line) transport, so
+  a system under test can be written in any language and driven as a black box.
+- `core/` is the deterministic heart: a fixed-order tick loop, a virtual clock with tick-counted timeouts, one seeded
+  entropy source, a fast-forward run loop with a seed-replay guarantee, and byte-stable snapshots with a structured
+  diff.
+- `sim/` is the simulated environment: a multi-process cluster, a message-level network with seeded faults, and a
+  crash-aware file model.
+
+The decisions that steer this work, and the go/no-go gate that proved the contract on a real replicated system (a quorum
+key-value store) before any further build, are recorded in [`docs/adr`](docs/adr/README.md).
+
 ## Development: the walls
 
 We encode best practices as deterministic checks and loop until green. `make check` is the single gate, and CI runs

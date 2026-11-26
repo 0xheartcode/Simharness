@@ -8,8 +8,10 @@ node_modules/
 dist/
 coverage/
 
-# local-only design notes (kept out of the public repo)
-docs/
+# local-only design notes (kept out of the public repo). Everything under docs/
+# is ignored by default so stray notes never leak; only docs/adr/ is tracked.
+docs/*
+!docs/adr/
 
 # secrets / local env
 .env

@@ -6,6 +6,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on the `0.0.x-alpha` line the public contract
 (`SimAdapter`, `SimharnessConfig`) may still change between releases; it will be frozen at the first `0.1.0`.
 
+## [Unreleased]
+
+Simharness is growing from a single-adapter game harness into a general deterministic simulation testing (DST) harness.
+This work lives under `src/engine` and is internal: it is not exported from the package index, so the published contract
+(`SimAdapter`, `SimharnessConfig`) and the released surface are unchanged, and the version stays `0.0.0-alpha.1`. The
+existing single-adapter tooling keeps working and will migrate onto the engine over time; there is one tool, not two.
+
+### Added
+
+- **Decision records** (`docs/adr`): the architecture charter, the message-level network boundary, the versioned
+  protocol v0 spec, and the phase-0 go/no-go gate (verdict GO).
+- **Protocol v0** (`src/engine/protocol`): a versioned orchestrator-to-adapter contract over an in-process transport and
+  a stdio JSON line transport, with a shared dispatch core so both behave identically, a JSON Schema for the stdio
+  envelope, and a trivial echo adapter plus dual-transport conformance tests.
+- **Deterministic core** (`src/engine/core`): a fixed-order tick loop (`Driver` / `Tickable` / `tickUntil`), a virtual
+  clock with tick-counted `Timeout` and a deterministic `WaitList`, one seeded entropy source (RNG plus positional
+  `IdGen`) with a fitness test that fails on any unseeded entropy, a fast-forward `Simulation` with a seed-replay
+  guarantee, and byte-stable snapshots with a structured first-divergence diff.
+- **Simulated environment** (`src/engine/sim`): a multi-process `Cluster` with a `ProcessId` registry and fixed-order
+  ticking, a message-level `SimulatedNetwork` with per-link delay, drop, duplicate, partition, and clog faults over a
+  delivery-tick priority queue, and a crash-aware `SimulatedFileIO` with visible/durable bytes and tick-completed
+  futures.
+- **Gate proof** (`examples/quorum-kv`): a quorum key-value reference system (3 replicas, W=R=2) hosted through the
+  contract, with a safety invariant that holds under seeded faults and is shown to have teeth.
+
 ## [0.0.0-alpha.1] - 2026-11-04
 
 Consumer-feedback round: features and fixes from three downstream integrations, each verified against the source. The
