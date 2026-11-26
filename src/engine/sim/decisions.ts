@@ -176,3 +176,77 @@ export class SimulationDecisions implements Tickable {
     this.#log.record("fault", entry as unknown as Record<string, unknown>);
   }
 }
+
+/**
+ * Applies an explicit, tick-stamped fault script to the network, instead of
+ * generating faults from a seed. This is what the coverage-guided fuzzer mutates
+ * (a structured input it has full control over), and it replays a schedule found
+ * by the seeded scheduler faithfully.
+ */
+export class ScriptedDecisions implements Tickable {
+  readonly name: string;
+  readonly #net: FaultInjector;
+  readonly #ids: readonly ProcessId[];
+  readonly #clock: TickClock;
+  readonly #log: EventLog;
+  readonly #script: readonly ScheduleEntry[];
+  #active = true;
+
+  constructor(
+    net: FaultInjector,
+    ids: readonly ProcessId[],
+    clock: TickClock,
+    log: EventLog,
+    script: readonly ScheduleEntry[],
+    name = "decisions",
+  ) {
+    this.name = name;
+    this.#net = net;
+    this.#ids = ids;
+    this.#clock = clock;
+    this.#log = log;
+    this.#script = script;
+  }
+
+  /** The script being applied (for reporting). */
+  get schedule(): readonly ScheduleEntry[] {
+    return this.#script;
+  }
+
+  /** Stop applying faults (for a liveness phase). */
+  quiesce(): void {
+    this.#active = false;
+  }
+
+  tick(): void {
+    if (!this.#active) return;
+    const tick = this.#clock.now();
+    for (const entry of this.#script) {
+      if (entry.tick === tick) this.#apply(entry);
+    }
+  }
+
+  #apply(entry: ScheduleEntry): void {
+    const [a, b] = entry.targets;
+    switch (entry.action) {
+      case "isolate":
+        for (const other of this.#ids) {
+          if (other !== a) this.#net.partition(a, other, true);
+        }
+        break;
+      case "partition":
+        if (b !== undefined) this.#net.partition(a, b, true);
+        break;
+      case "delay":
+        if (b !== undefined) this.#net.setLink(a, b, { delay: (entry.detail?.delay as number) ?? 3 });
+        break;
+      case "drop":
+        if (b !== undefined) this.#net.setLink(a, b, { dropRate: (entry.detail?.dropRate as number) ?? 0.5 });
+        break;
+      case "heal":
+        this.#net.heal();
+        break;
+    }
+    this.#log.record("fault", entry as unknown as Record<string, unknown>);
+  }
+}

@@ -6,7 +6,7 @@
 import type { ProcessId } from "../sim/cluster.ts";
 import { Cluster, type Node, type NodeDeps } from "../sim/cluster.ts";
 import { type DeliveryScheduler, SimulatedNetwork } from "../sim/network.ts";
-import { type ScheduleEntry, SimulationDecisions } from "../sim/decisions.ts";
+import { type ScheduleEntry, ScriptedDecisions, SimulationDecisions } from "../sim/decisions.ts";
 import { faultProfile, type RequestGen, Workload, type WorkloadConfig } from "../sim/workload.ts";
 import type { Tickable } from "../core/tickable.ts";
 import type { SimEvent } from "../core/run.ts";
@@ -47,6 +47,8 @@ export interface RunOptions {
   mask?: ReadonlySet<number>;
   /** Delivery-order scheduler (the interleaving explorer); undefined is send order. */
   scheduler?: DeliveryScheduler;
+  /** Apply this explicit fault script instead of the seeded scheduler (the coverage fuzzer). */
+  faultScript?: readonly ScheduleEntry[];
 }
 
 /** Build and run the scenario once, deterministically, and collect the result. */
@@ -64,8 +66,9 @@ export function runScenario(scenario: Scenario, opts: RunOptions): ScenarioRun {
     },
     (deps) => scenario.buildNode(deps),
     (deps) => {
-      const controllers: Tickable[] = [
-        decisions = new SimulationDecisions(
+      const faultController: Tickable = opts.faultScript
+        ? new ScriptedDecisions(net, deps.ids, deps.clock, deps.log, opts.faultScript)
+        : (decisions = new SimulationDecisions(
           net,
           deps.ids,
           deps.entropy.rng,
@@ -73,8 +76,8 @@ export function runScenario(scenario: Scenario, opts: RunOptions): ScenarioRun {
           deps.log,
           faultProfile(opts.profile),
           opts.mask,
-        ),
-      ];
+        ));
+      const controllers: Tickable[] = [faultController];
       if (scenario.requestGen) {
         controllers.push(
           new Workload(deps.send, deps.entropy.rng, deps.clock, deps.log, scenario.requestGen, scenario.workload ?? {}),
@@ -95,7 +98,7 @@ export function runScenario(scenario: Scenario, opts: RunOptions): ScenarioRun {
     ticks: opts.ticks,
     profile: opts.profile,
     events: cluster.events,
-    schedule: decisions.schedule,
+    schedule: opts.faultScript ?? decisions.schedule,
     nodeStates,
   };
 }

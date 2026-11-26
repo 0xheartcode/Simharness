@@ -8,6 +8,7 @@ import { checkInvariants, runScenario, type Scenario, type ScenarioRun } from ".
 import { snapshot } from "../core/snapshot.ts";
 import { minimalRepro } from "../check/shrink.ts";
 import { exploreSchedules } from "../check/schedule_explore.ts";
+import { coverageFuzz } from "../check/coverage_fuzz.ts";
 
 interface Flags {
   positionals: string[];
@@ -96,6 +97,24 @@ export function runCli(argv: readonly string[], scenario: Scenario): number {
     }
 
     case "fuzz": {
+      if (values.guided === true) {
+        const iterations = int(values.iterations, 20000);
+        const result = coverageFuzz(scenario, { seed: int(positionals[1], 0), ticks, iterations });
+        if (result.bug) {
+          log(`FAIL: coverage-guided fuzzing found a fault script that breaks an invariant: ${result.bug.breaks[0]}`);
+          log(`  found at iteration ${result.iterations} (coverage ${result.coverage}); faults:`);
+          for (const e of result.bug.faults) {
+            log(
+              `    tick=${e.tick} ${e.action} ${e.targets.join(",")}${e.detail ? " " + JSON.stringify(e.detail) : ""}`,
+            );
+          }
+          return 1;
+        }
+        log(
+          `ok: coverage-guided fuzzing ran ${result.iterations} iterations, coverage ${result.coverage}, no invariant broken`,
+        );
+        return 0;
+      }
       const shrink = values["no-shrink"] !== true;
       for (let seed = 0; seed < seeds; seed++) {
         const run = runScenario(scenario, { seed, ticks, profile });
