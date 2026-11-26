@@ -111,7 +111,10 @@ The engine lives under `src/engine`:
   crash-aware file model, a seeded fault scheduler that emits a replayable structured schedule, and closed-loop client
   workloads.
 - `cli/` is the orchestrator: a `Scenario` (cluster plus workload plus invariants) driven by `run` / `replay` / `fuzz` /
-  `assert` / `snap` / `metrics`, where `fuzz` is a CI gate that exits nonzero with the offending seed.
+  `assert` / `snap` / `metrics`, where `fuzz` is a CI gate that exits nonzero with the offending seed and the minimal
+  essential fault set.
+- `check/` is correctness: a client-visible history, a linearizability checker, a converge-after-heal liveness check,
+  and faithful, deterministic fault-schedule shrinking to a minimal repro.
 
 The decisions that steer this work, and the go/no-go gate that proved the contract on a real replicated system (a quorum
 key-value store) before any further build, are recorded in [`docs/adr`](docs/adr/README.md).

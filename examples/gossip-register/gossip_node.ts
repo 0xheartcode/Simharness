@@ -12,6 +12,8 @@ import type { Node, NodeDeps, ProcessId } from "../../src/engine/sim/cluster.ts"
 export interface GossipOptions {
   gossipEvery: number;
   buggy?: boolean;
+  /** Never gossip (a wedged node that cannot re-sync after a partition heals). */
+  silent?: boolean;
 }
 
 export class GossipNode implements Node {
@@ -20,6 +22,7 @@ export class GossipNode implements Node {
   readonly #peers: ProcessId[];
   readonly #every: number;
   readonly #buggy: boolean;
+  readonly #silent: boolean;
   #value = 0;
   #version = -1;
 
@@ -29,9 +32,11 @@ export class GossipNode implements Node {
     this.#peers = allIds.filter((x) => x !== deps.id);
     this.#every = Math.max(1, opts.gossipEvery);
     this.#buggy = opts.buggy ?? false;
+    this.#silent = opts.silent ?? false;
   }
 
   tick(): void {
+    if (this.#silent) return;
     if (this.#deps.clock.now() % this.#every !== 0) return;
     for (const peer of this.#peers) {
       this.#deps.net.send({

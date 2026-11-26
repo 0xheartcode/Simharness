@@ -27,6 +27,10 @@ export interface ScheduleEntry {
   action: FaultKind | "heal";
   targets: string[];
   detail?: Record<string, unknown>;
+  /** Index among fault injections (not heals), for masking during shrinking. */
+  index?: number;
+  /** Whether this fault was applied to the network (false when masked out). */
+  applied?: boolean;
 }
 
 export interface DecisionConfig {
@@ -57,6 +61,9 @@ export class SimulationDecisions implements Tickable {
   readonly #dropRate: number;
   readonly #faults: readonly FaultKind[];
   readonly #schedule: ScheduleEntry[] = [];
+  readonly #mask?: ReadonlySet<number>;
+  #active = true;
+  #faultIndex = 0;
 
   constructor(
     net: FaultInjector,
@@ -65,6 +72,7 @@ export class SimulationDecisions implements Tickable {
     clock: TickClock,
     log: EventLog,
     config: DecisionConfig = {},
+    mask?: ReadonlySet<number>,
     name = "decisions",
   ) {
     this.name = name;
@@ -78,6 +86,7 @@ export class SimulationDecisions implements Tickable {
     this.#maxDelay = Math.max(1, Math.floor(config.maxDelay ?? 5));
     this.#dropRate = config.dropRate ?? 0.5;
     this.#faults = config.faults && config.faults.length > 0 ? config.faults : ALL_FAULTS;
+    this.#mask = mask;
   }
 
   /** The structured fault schedule emitted so far. Replayable and readable on its own. */
@@ -85,7 +94,18 @@ export class SimulationDecisions implements Tickable {
     return this.#schedule;
   }
 
+  /** Whether fault index `i` is applied: masking drops its effect but never its RNG draws. */
+  #allowed(i: number): boolean {
+    return this.#mask === undefined || this.#mask.has(i);
+  }
+
+  /** Stop injecting faults and healing (for a liveness phase that lets the cluster settle). */
+  quiesce(): void {
+    this.#active = false;
+  }
+
   tick(): void {
+    if (!this.#active) return;
     const tick = this.#clock.now();
 
     // Periodic heal first: a fault injected this same tick then persists.
@@ -96,46 +116,52 @@ export class SimulationDecisions implements Tickable {
 
     if (!this.#rng.bool(this.#faultProb)) return;
     const kind = this.#rng.pick(this.#faults);
+    // The index is assigned and all target RNG is drawn regardless of the mask,
+    // so masking a fault out changes only its effect, never the RNG stream.
+    const index = this.#faultIndex++;
+    const applied = this.#allowed(index);
     switch (kind) {
       case "isolate":
-        return this.#isolate(tick);
+        return this.#isolate(tick, index, applied);
       case "partition":
-        return this.#partitionPair(tick);
+        return this.#partitionPair(tick, index, applied);
       case "delay":
-        return this.#delayLink(tick);
+        return this.#delayLink(tick, index, applied);
       case "drop":
-        return this.#dropLink(tick);
+        return this.#dropLink(tick, index, applied);
     }
   }
 
-  #isolate(tick: number): void {
+  #isolate(tick: number, index: number, applied: boolean): void {
     const node = this.#rng.pick(this.#ids);
-    for (const other of this.#ids) {
-      if (other !== node) this.#net.partition(node, other, true);
+    if (applied) {
+      for (const other of this.#ids) {
+        if (other !== node) this.#net.partition(node, other, true);
+      }
     }
-    this.#emit({ tick, action: "isolate", targets: [node] });
+    this.#emit({ tick, action: "isolate", targets: [node], index, applied });
   }
 
-  #partitionPair(tick: number): void {
+  #partitionPair(tick: number, index: number, applied: boolean): void {
     const [a, b] = this.#twoDistinct();
     if (a === undefined || b === undefined) return;
-    this.#net.partition(a, b, true);
-    this.#emit({ tick, action: "partition", targets: [a, b] });
+    if (applied) this.#net.partition(a, b, true);
+    this.#emit({ tick, action: "partition", targets: [a, b], index, applied });
   }
 
-  #delayLink(tick: number): void {
+  #delayLink(tick: number, index: number, applied: boolean): void {
     const [a, b] = this.#twoDistinct();
     if (a === undefined || b === undefined) return;
     const delay = 1 + this.#rng.int(this.#maxDelay);
-    this.#net.setLink(a, b, { delay });
-    this.#emit({ tick, action: "delay", targets: [a, b], detail: { delay } });
+    if (applied) this.#net.setLink(a, b, { delay });
+    this.#emit({ tick, action: "delay", targets: [a, b], detail: { delay }, index, applied });
   }
 
-  #dropLink(tick: number): void {
+  #dropLink(tick: number, index: number, applied: boolean): void {
     const [a, b] = this.#twoDistinct();
     if (a === undefined || b === undefined) return;
-    this.#net.setLink(a, b, { dropRate: this.#dropRate });
-    this.#emit({ tick, action: "drop", targets: [a, b], detail: { dropRate: this.#dropRate } });
+    if (applied) this.#net.setLink(a, b, { dropRate: this.#dropRate });
+    this.#emit({ tick, action: "drop", targets: [a, b], detail: { dropRate: this.#dropRate }, index, applied });
   }
 
   #twoDistinct(): [ProcessId | undefined, ProcessId | undefined] {

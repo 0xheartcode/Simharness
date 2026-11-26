@@ -34,6 +34,10 @@ existing single-adapter tooling keeps working and will migrate onto the engine o
 - **Cluster CLI** (`src/engine/cli`): a `Scenario` abstraction and a `run` / `replay` / `fuzz` / `assert` / `snap` /
   `metrics` command set over a cluster, with long-form flags, seed-first failure output, and a `fuzz` that exits nonzero
   with the offending seed as a CI gate.
+- **Correctness checking** (`src/engine/check`): a client-visible `History` (Jepsen-style invoke/ok/fail), a
+  linearizability checker for a register with a pluggable model, a liveness check (converge-after-heal, with a wedged
+  cluster tripping it), and failure-to-minimal-repro fault-schedule shrinking that is faithful (masking a fault drops
+  its effect without disturbing the RNG stream) and deterministic, surfaced by `fuzz` as the essential fault set.
 - **Gate proof** (`examples/quorum-kv`): a quorum key-value reference system (3 replicas, W=R=2) hosted through the
   contract, with a safety invariant that holds under seeded faults and is shown to have teeth.
 - **Cluster example** (`examples/gossip-register`): a gossip last-writer-wins register as real cluster nodes, with a

@@ -9,11 +9,11 @@ import { GossipNode } from "./gossip_node.ts";
 
 const IDS = ["athens", "byzantium", "cyrene"] as const;
 
-export function gossipScenario(opts: { buggy?: boolean } = {}): Scenario {
+export function gossipScenario(opts: { buggy?: boolean; silent?: boolean } = {}): Scenario {
   return {
     name: "gossip-register",
     nodeIds: IDS,
-    buildNode: (deps) => new GossipNode(deps, IDS, { gossipEvery: 3, buggy: opts.buggy ?? false }),
+    buildNode: (deps) => new GossipNode(deps, IDS, { gossipEvery: 3, buggy: opts.buggy ?? false, silent: opts.silent }),
     requestGen: (rng, tick) => ({
       from: "client",
       to: rng.pick(IDS),

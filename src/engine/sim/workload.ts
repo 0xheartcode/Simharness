@@ -34,6 +34,7 @@ export class Workload implements Tickable {
   readonly #thinkTicks: number;
   #cooldown = 0;
   #issued = 0;
+  #active = true;
 
   constructor(
     send: (msg: Message) => void,
@@ -59,7 +60,13 @@ export class Workload implements Tickable {
     return this.#issued;
   }
 
+  /** Stop issuing new requests (for a liveness phase that lets outstanding work drain). */
+  quiesce(): void {
+    this.#active = false;
+  }
+
   tick(): void {
+    if (!this.#active) return;
     if (this.#cooldown > 0) {
       this.#cooldown -= 1;
       return;
