@@ -20,9 +20,9 @@ DENO ?= deno
 # up as slices land; never down to pass. Actual at 0.0.0-alpha.0: 98.0%.
 COV_FLOOR ?= 95
 
-.PHONY: check fmt lint typecheck deps version api api-check test cov-gate cov cov-html compile package clean
+.PHONY: check fmt lint typecheck deps version api api-check determinism test cov-gate cov cov-html compile package clean
 
-check: fmt lint typecheck deps version api-check test cov-gate
+check: fmt lint typecheck deps version api-check determinism test cov-gate
 	@echo "═══ make check: ALL WALLS GREEN ═══"
 
 fmt:
@@ -52,6 +52,10 @@ api:
 api-check:
 	@echo "── api-doc freshness (API.md matches the exports) ──"
 	$(DENO) run --allow-read scripts/gen_api.ts --check
+
+determinism:
+	@echo "── determinism fitness (no wall clock / unseeded entropy / real async in core) ──"
+	$(DENO) run --allow-read scripts/check_determinism.ts
 
 test:
 	@echo "── tests (with coverage) ──"
