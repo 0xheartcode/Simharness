@@ -15,6 +15,10 @@ existing single-adapter tooling keeps working and will migrate onto the engine o
 
 ### Added
 
+- **Byte-level network seam, engine-integrated** (`src/engine/sim/byte_network.ts`, ADR-002 phase-7): a tick-driven
+  `SimulatedByteChannel` that delivers a byte stream in seeded fragments ignoring frame boundaries, and can cut a
+  fragment mid-stream. A buffering framer recovers every frame under fragmentation; a naive one-read-one-frame framer
+  breaks. Whole-frame (message-level) delivery hides the same split-frame bug.
 - **Coverage-guided fuzzing, engine-integrated** (`src/engine/check/coverage_fuzz.ts`, ADR-007): a corpus-plus-coverage
   fuzzer over explicit fault scripts (applied by `ScriptedDecisions`, which also replays a schedule faithfully). It
   keeps scripts that reach new coverage and mutates from them, so it builds toward a deep cascade bug (silencing a

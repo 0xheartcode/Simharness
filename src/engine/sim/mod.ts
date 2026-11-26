@@ -24,3 +24,11 @@ export {
   SimulationDecisions,
 } from "./decisions.ts";
 export { FAULT_PROFILES, faultProfile, type RequestGen, Workload, type WorkloadConfig } from "./workload.ts";
+export {
+  BufferedFramer,
+  type ByteChannelConfig,
+  type ByteSink,
+  encodeFrames,
+  NaiveFramer,
+  SimulatedByteChannel,
+} from "./byte_network.ts";
