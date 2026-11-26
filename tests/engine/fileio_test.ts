@@ -65,6 +65,15 @@ Deno.test("SimulatedFileIO: truncate shrinks the visible file", () => {
   assertEquals(f.peekVisible(), [1, 2, 3]);
 });
 
+Deno.test("SimulatedFileIO: truncate past the end zero-extends the file", () => {
+  const f = new SimulatedFileIO();
+  f.write(0, [1, 2]);
+  f.tick();
+  f.truncate(4);
+  f.tick();
+  assertEquals(f.peekVisible(), [1, 2, 0, 0]);
+});
+
 Deno.test("SimulatedFileIO: crash drops an in-flight write", () => {
   const f = new SimulatedFileIO();
   const w = f.write(0, [7, 7]);
