@@ -15,6 +15,11 @@ existing single-adapter tooling keeps working and will migrate onto the engine o
 
 ### Added
 
+- **Interleaving exploration, engine-integrated** (`src/engine/check/schedule_explore.ts`, ADR-007): a stateless model
+  checker that makes the `SimulatedNetwork` delivery order a choice point and explores delivery interleavings with a
+  partial-order reduction (only same-recipient messages are reordered, since cross-recipient order is independent). A
+  CLI `explore` command runs it. It finds an order-dependent bug (a withdraw lost to withdraw-before-deposit delivery in
+  `examples/bank`) that the default send order and random seeds both miss, and the counterexample path replays.
 - **Decision records** (`docs/adr`): the architecture charter, the message-level network boundary, the versioned
   protocol v0 spec, and the phase-0 go/no-go gate (verdict GO).
 - **Protocol v0** (`src/engine/protocol`): a versioned orchestrator-to-adapter contract over an in-process transport and

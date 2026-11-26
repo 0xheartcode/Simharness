@@ -7,6 +7,7 @@
 import { checkInvariants, runScenario, type Scenario, type ScenarioRun } from "./scenario.ts";
 import { snapshot } from "../core/snapshot.ts";
 import { minimalRepro } from "../check/shrink.ts";
+import { exploreSchedules } from "../check/schedule_explore.ts";
 
 interface Flags {
   positionals: string[];
@@ -175,6 +176,23 @@ export function runCli(argv: readonly string[], scenario: Scenario): number {
       return 1;
     }
 
+    case "explore": {
+      const seed = int(positionals[1], 0);
+      const maxRuns = int(values["max-runs"], 2000);
+      const result = exploreSchedules(scenario, { seed, ticks, profile, maxRuns });
+      if (result.violation) {
+        log(`FAIL seed=${seed}: a delivery order breaks an invariant: ${result.violation.breaks[0]}`);
+        log(`  found after ${result.runs} schedules; reproduce path: [${result.violation.path.join(",")}]`);
+        return 1;
+      }
+      log(
+        `ok: seed=${seed} explored ${result.runs} delivery schedules, ${profile} profile${
+          result.exhausted ? " (space exhausted)" : " (bound reached)"
+        }, no reordering breaks an invariant`,
+      );
+      return 0;
+    }
+
     case "metrics": {
       let faults = 0, delivers = 0, requests = 0;
       for (let seed = 0; seed < seeds; seed++) {
@@ -197,7 +215,7 @@ export function runCli(argv: readonly string[], scenario: Scenario): number {
 
     default:
       log(
-        "usage: <run|replay|fuzz|assert|snap|metrics|explain> [seed] [--ticks N] [--seeds N] [--profile NAME] [--json]",
+        "usage: <run|replay|fuzz|assert|snap|metrics|explain|explore> [seed] [--ticks N] [--seeds N] [--profile NAME] [--json]",
       );
       return 2;
   }

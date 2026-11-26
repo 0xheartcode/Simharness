@@ -5,7 +5,7 @@
 
 import type { ProcessId } from "../sim/cluster.ts";
 import { Cluster, type Node, type NodeDeps } from "../sim/cluster.ts";
-import { SimulatedNetwork } from "../sim/network.ts";
+import { type DeliveryScheduler, SimulatedNetwork } from "../sim/network.ts";
 import { type ScheduleEntry, SimulationDecisions } from "../sim/decisions.ts";
 import { faultProfile, type RequestGen, Workload, type WorkloadConfig } from "../sim/workload.ts";
 import type { Tickable } from "../core/tickable.ts";
@@ -45,6 +45,8 @@ export interface RunOptions {
   profile: string;
   /** Apply only these fault indices (for shrinking); undefined applies all. */
   mask?: ReadonlySet<number>;
+  /** Delivery-order scheduler (the interleaving explorer); undefined is send order. */
+  scheduler?: DeliveryScheduler;
 }
 
 /** Build and run the scenario once, deterministically, and collect the result. */
@@ -55,7 +57,11 @@ export function runScenario(scenario: Scenario, opts: RunOptions): ScenarioRun {
   const cluster = new Cluster(
     opts.seed,
     scenario.nodeIds,
-    (deps) => (net = new SimulatedNetwork(deps)),
+    (deps) => {
+      net = new SimulatedNetwork(deps);
+      net.setScheduler(opts.scheduler);
+      return net;
+    },
     (deps) => scenario.buildNode(deps),
     (deps) => {
       const controllers: Tickable[] = [

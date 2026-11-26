@@ -15,6 +15,8 @@ old one.
   that enforces them in `make check`.
 - [ADR-006: positioning](0006-positioning.md) - the one-sentence why, and where this sits versus Antithesis, Shuttle,
   Turmoil, and Tickloom.
+- [ADR-007: the advanced tiers live in two places](0007-advanced-tiers.md) - engine-integrated for in-process SUTs and
+  native Rust for Rust-native SUTs; amends ADR-001's Rust-only scoping.
 
 Guides live in [`docs/guide`](../guide): migrating an existing adapter onto the engine, and the reference systems under
 test.

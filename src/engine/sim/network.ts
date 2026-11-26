@@ -32,16 +32,38 @@ interface Queued {
   dup: boolean;
 }
 
+/** A due message as seen by a delivery scheduler (no internals exposed). */
+export interface DueMessage {
+  from: string;
+  to: string;
+  kind: string;
+  seq: number;
+}
+
+/**
+ * Decides the order the due messages are delivered in on a tick. Given the due
+ * messages (already in the default deliverAt/seq order), it returns a
+ * permutation of their indices. The interleaving explorer uses this to make the
+ * delivery order a choice point; the default is identity (send order).
+ */
+export type DeliveryScheduler = (due: readonly DueMessage[]) => readonly number[];
+
 export class SimulatedNetwork implements Network {
   readonly name = "network";
   readonly #deps: NetworkDeps;
   readonly #links = new Map<string, LinkConfig>();
   #queue: Queued[] = [];
   #seq = 0;
+  #scheduler: DeliveryScheduler | undefined;
 
   constructor(deps: NetworkDeps, links: Record<string, LinkConfig> = {}) {
     this.#deps = deps;
     for (const [key, cfg] of Object.entries(links)) this.#links.set(key, { ...cfg });
+  }
+
+  /** Install a delivery-order scheduler (the interleaving explorer uses this). */
+  setScheduler(scheduler: DeliveryScheduler | undefined): void {
+    this.#scheduler = scheduler;
   }
 
   #key(from: string, to: string): string {
@@ -102,7 +124,10 @@ export class SimulatedNetwork implements Network {
       a.deliverAt - b.deliverAt || a.seq - b.seq
     );
     this.#queue = this.#queue.filter((e) => e.deliverAt > now);
-    for (const e of due) this.#deliver(e);
+    const order = this.#scheduler
+      ? this.#scheduler(due.map((e) => ({ from: e.msg.from, to: e.msg.to, kind: e.msg.kind, seq: e.seq })))
+      : due.map((_, i) => i);
+    for (const i of order) this.#deliver(due[i]);
   }
 
   #maybeFlipPartitions(): void {
