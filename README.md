@@ -121,7 +121,9 @@ The engine lives under `src/engine`:
 A Rust adapter SDK lives under [`rs/`](rs) (`simharness-adapter`): protocol v0 over stdio with an echo adapter. It is
 the evidence that the protocol is polyglot, checked by a cross-language conformance test (a shared golden fixture
 generated from the TypeScript reference, verified by both a Rust `cargo test` and a live run of the compiled Rust binary
-driven over stdio). `make rs-check` runs the Rust walls (fmt, clippy, tests); CI runs it in its own job.
+driven over stdio). A Rust orchestrator (`simharness-orchestrator`) is a single static binary that drives any stdio SUT
+with `run` / `replay` / `fuzz` / `snap`, checking determinism with seed-first reporting; a test has it drive the
+TypeScript echo adapter over stdio. `make rs-check` runs the Rust walls (fmt, clippy, tests); CI runs it in its own job.
 
 The decisions that steer this work, and the go/no-go gate that proved the contract on a real replicated system (a quorum
 key-value store) before any further build, are recorded in [`docs/adr`](docs/adr/README.md). Guides for migrating an
