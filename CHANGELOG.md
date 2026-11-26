@@ -15,6 +15,11 @@ existing single-adapter tooling keeps working and will migrate onto the engine o
 
 ### Added
 
+- **Coverage-guided fuzzing, engine-integrated** (`src/engine/check/coverage_fuzz.ts`, ADR-007): a corpus-plus-coverage
+  fuzzer over explicit fault scripts (applied by `ScriptedDecisions`, which also replays a schedule faithfully). It
+  keeps scripts that reach new coverage and mutates from them, so it builds toward a deep cascade bug (silencing a
+  specific set of sources in `examples/cascade`) that a blind search of the same budget does not reach. A CLI
+  `fuzz --guided` mode runs it.
 - **Interleaving exploration, engine-integrated** (`src/engine/check/schedule_explore.ts`, ADR-007): a stateless model
   checker that makes the `SimulatedNetwork` delivery order a choice point and explores delivery interleavings with a
   partial-order reduction (only same-recipient messages are reordered, since cross-recipient order is independent). A
