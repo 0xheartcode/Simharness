@@ -25,30 +25,48 @@ export function serveStdio(adapter: Adapter): Promise<void> {
 /** A live connection to a child-process adapter. */
 export interface Subprocess {
   client: LineClient;
-  /** Close stdin, wait for the read loop and the child to exit. */
-  close(): Promise<void>;
+  /** Everything the child has written to stderr so far, for diagnosing a crash. */
+  stderr(): string;
+  /** Close stdin, wait for the read loop and the child to exit; returns the exit status. */
+  close(): Promise<Deno.CommandStatus>;
+}
+
+export interface SubprocessOptions {
+  /** Wall-clock per-request safety timeout in ms (0 disables it). */
+  timeoutMs?: number;
 }
 
 /**
  * Spawn a child-process adapter and return a client wired to its stdin/stdout.
  * `command` and `args` launch the adapter (for a Deno adapter: the deno binary
- * plus `run <flags> entry.ts`). stderr is inherited for the child's own logs.
+ * plus `run <flags> entry.ts`). stderr is captured so a crash is diagnosable,
+ * and an optional per-request timeout stops a hung child from blocking forever.
  */
-export function connectSubprocess(command: string, args: string[]): Subprocess {
+export function connectSubprocess(command: string, args: string[], opts: SubprocessOptions = {}): Subprocess {
   const child = new Deno.Command(command, {
     args,
     stdin: "piped",
     stdout: "piped",
-    stderr: "inherit",
+    stderr: "piped",
   }).spawn();
 
-  const client = new LineClient(toLineStream(child.stdout), stringSink(child.stdin));
+  const client = new LineClient(toLineStream(child.stdout), stringSink(child.stdin), opts.timeoutMs ?? 0);
+
+  // Drain stderr into a buffer so it can be surfaced if the child misbehaves.
+  let stderrText = "";
+  const stderrDone = (async () => {
+    const decoder = new TextDecoder();
+    for await (const chunk of child.stderr) stderrText += decoder.decode(chunk, { stream: true });
+  })().catch(() => {});
 
   return {
     client,
+    stderr: () => stderrText,
     async close() {
       await client.close();
-      await child.status;
+      const status = await child.status;
+      await stderrDone;
+      return status;
     },
   };
 }

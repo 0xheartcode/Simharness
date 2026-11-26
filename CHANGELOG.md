@@ -45,6 +45,10 @@ existing single-adapter tooling keeps working and will migrate onto the engine o
 - **Determinism fitness function** (`scripts/check_determinism.ts`, ADR-005): a `determinism` wall in `make check` that
   fails the build on a wall-clock read, unseeded entropy, or real scheduling/async in the engine core. Documents the
   full SUT determinism contract, including the rules the Rust SDK will enforce later.
+- **In-process TypeScript adapter SDK** (`src/engine/sdk`): `fromSimAdapter` runs an existing `SimAdapter` through
+  protocol v0 unchanged, so the existing tooling adapts onto the engine. The chase game example runs through it.
+- **stdio transport hardening** (`src/engine/protocol`): a wall-clock per-request safety timeout so a hung child fails
+  loud instead of blocking, plus captured child stderr and exit status surfaced for diagnosing a crashed adapter.
 
 ## [0.0.0-alpha.1] - 2026-11-04
 

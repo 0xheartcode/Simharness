@@ -115,6 +115,8 @@ The engine lives under `src/engine`:
   essential fault set.
 - `check/` is correctness: a client-visible history, a linearizability checker, a converge-after-heal liveness check,
   and faithful, deterministic fault-schedule shrinking to a minimal repro.
+- `sdk/` is the in-process adapter SDK: `fromSimAdapter` runs an existing `SimAdapter` through protocol v0 unchanged, so
+  the existing single-adapter tooling adapts onto the engine rather than being rewritten.
 
 The decisions that steer this work, and the go/no-go gate that proved the contract on a real replicated system (a quorum
 key-value store) before any further build, are recorded in [`docs/adr`](docs/adr/README.md).
