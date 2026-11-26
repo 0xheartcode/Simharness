@@ -67,6 +67,25 @@ Deno.test("cli metrics and json run produce machine-readable output", () => {
   assertEquals(JSON.parse(run.out).cmd, "run");
 });
 
+Deno.test("cli explain: emits a self-contained failure report on a failing seed", () => {
+  // find a failing seed for the buggy scenario
+  const fuzz = cli(["fuzz", "--seeds", "25", "--ticks", "120"], true);
+  const seed = fuzz.out.match(/FAIL seed=(\d+)/)?.[1];
+  assert(seed !== undefined);
+  const r = cli(["explain", seed!, "--ticks", "120"], true);
+  assertStrictEquals(r.code, 1);
+  assert(r.out.includes("failure report"), r.out);
+  assert(r.out.includes("minimal fault schedule"), r.out);
+  assert(r.out.includes("event log"), r.out);
+  assert(r.out.includes("reproduce:"), r.out);
+});
+
+Deno.test("cli explain: a clean seed has nothing to explain (exit 0)", () => {
+  const r = cli(["explain", "2", "--ticks", "100"]);
+  assertStrictEquals(r.code, 0);
+  assert(r.out.includes("clean:"), r.out);
+});
+
 Deno.test("cli: an unknown command prints usage and exits 2", () => {
   const r = cli(["wat"]);
   assertStrictEquals(r.code, 2);

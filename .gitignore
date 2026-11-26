@@ -9,9 +9,11 @@ dist/
 coverage/
 
 # local-only design notes (kept out of the public repo). Everything under docs/
-# is ignored by default so stray notes never leak; only docs/adr/ is tracked.
+# is ignored by default so stray notes never leak; only docs/adr/ and docs/guide/
+# are tracked.
 docs/*
 !docs/adr/
+!docs/guide/
 
 # secrets / local env
 .env

@@ -111,15 +111,16 @@ The engine lives under `src/engine`:
   crash-aware file model, a seeded fault scheduler that emits a replayable structured schedule, and closed-loop client
   workloads.
 - `cli/` is the orchestrator: a `Scenario` (cluster plus workload plus invariants) driven by `run` / `replay` / `fuzz` /
-  `assert` / `snap` / `metrics`, where `fuzz` is a CI gate that exits nonzero with the offending seed and the minimal
-  essential fault set.
+  `assert` / `snap` / `metrics` / `explain`, where `fuzz` is a CI gate that exits nonzero with the offending seed and
+  the minimal essential fault set, and `explain` emits a copy-pasteable failure report.
 - `check/` is correctness: a client-visible history, a linearizability checker, a converge-after-heal liveness check,
   and faithful, deterministic fault-schedule shrinking to a minimal repro.
 - `sdk/` is the in-process adapter SDK: `fromSimAdapter` runs an existing `SimAdapter` through protocol v0 unchanged, so
   the existing single-adapter tooling adapts onto the engine rather than being rewritten.
 
 The decisions that steer this work, and the go/no-go gate that proved the contract on a real replicated system (a quorum
-key-value store) before any further build, are recorded in [`docs/adr`](docs/adr/README.md).
+key-value store) before any further build, are recorded in [`docs/adr`](docs/adr/README.md). Guides for migrating an
+adapter onto the engine and for the reference systems under test are in [`docs/guide`](docs/guide).
 
 ## Development: the walls
 
