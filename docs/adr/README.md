@@ -1,0 +1,13 @@
+# Architecture decision records
+
+Decisions that steer the rewrite. Each record is immutable once Accepted; a change is a new record that supersedes an
+old one.
+
+- [ADR-001: architecture charter](0001-architecture-charter.md) - orchestrator language, protocol split,
+  walk-the-real-code, determinism, capability tiers, non-goals.
+- [ADR-002: network simulation boundary](0002-network-simulation-boundary.md) - message-level for the core, byte-level
+  as a later tier.
+- [Protocol v0](0003-protocol-v0.md) - the versioned orchestrator-to-adapter contract (operations, SimState, both
+  transports).
+- [Phase-0 gate go/no-go](0004-phase-0-gate-go-no-go.md) - GO: the contract hosts a real quorum-KV system under faults
+  with no shape change forced.

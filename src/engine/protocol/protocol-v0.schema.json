@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/0xheartcode/Simharness/schema/protocol-v0.json",
+  "title": "Simharness protocol v0 stdio envelope",
+  "description": "The JSON line envelope for the orchestrator-to-adapter stdio transport. One value per line. Spec: docs/adr/0003-protocol-v0.md.",
+  "oneOf": [
+    { "$ref": "#/$defs/request" },
+    { "$ref": "#/$defs/response" }
+  ],
+  "$defs": {
+    "op": {
+      "enum": [
+        "hello",
+        "reset",
+        "tick",
+        "read_state",
+        "available_actions",
+        "act",
+        "deliver",
+        "drain_outbox",
+        "history",
+        "snapshot",
+        "bye"
+      ]
+    },
+    "errorCode": {
+      "enum": ["protocol_mismatch", "unsupported", "bad_args", "sut_error"]
+    },
+    "request": {
+      "type": "object",
+      "required": ["v", "id", "op", "args"],
+      "properties": {
+        "v": { "const": 0 },
+        "id": { "type": "integer" },
+        "op": { "$ref": "#/$defs/op" },
+        "args": { "type": "object" }
+      },
+      "additionalProperties": false
+    },
+    "response": {
+      "oneOf": [
+        { "$ref": "#/$defs/okResponse" },
+        { "$ref": "#/$defs/errResponse" }
+      ]
+    },
+    "okResponse": {
+      "type": "object",
+      "required": ["v", "id", "ok", "result"],
+      "properties": {
+        "v": { "const": 0 },
+        "id": { "type": "integer" },
+        "ok": { "const": true },
+        "result": {}
+      },
+      "additionalProperties": false
+    },
+    "errResponse": {
+      "type": "object",
+      "required": ["v", "id", "ok", "error"],
+      "properties": {
+        "v": { "const": 0 },
+        "id": { "type": "integer" },
+        "ok": { "const": false },
+        "error": {
+          "type": "object",
+          "required": ["code"],
+          "properties": { "code": { "$ref": "#/$defs/errorCode" } }
+        }
+      },
+      "additionalProperties": false
+    },
+    "capabilities": {
+      "type": "object",
+      "required": [
+        "name",
+        "protocol",
+        "supportsActions",
+        "supportsNetwork",
+        "supportsStorage",
+        "supportsByteNetwork",
+        "deterministicConcurrency"
+      ],
+      "properties": {
+        "name": { "type": "string" },
+        "protocol": { "type": "integer" },
+        "supportsActions": { "type": "boolean" },
+        "supportsNetwork": { "type": "boolean" },
+        "supportsStorage": { "type": "boolean" },
+        "supportsByteNetwork": { "type": "boolean" },
+        "deterministicConcurrency": { "type": "boolean" }
+      }
+    },
+    "simState": {
+      "type": "object",
+      "required": ["tick", "phase", "extra"],
+      "properties": {
+        "tick": { "type": "number" },
+        "phase": { "type": "string" },
+        "extra": { "type": "object" },
+        "hero": { "type": "object" },
+        "enemies": { "type": "array", "items": { "type": "object" } }
+      }
+    },
+    "message": {
+      "type": "object",
+      "required": ["from", "to", "kind", "payload"],
+      "properties": {
+        "from": { "type": "string" },
+        "to": { "type": "string" },
+        "kind": { "type": "string" },
+        "payload": { "type": "object" }
+      }
+    },
+    "historyEntry": {
+      "type": "object",
+      "required": ["kind", "client", "op", "tick"],
+      "properties": {
+        "kind": { "enum": ["invoke", "ok", "fail"] },
+        "client": { "type": "string" },
+        "op": { "type": "string" },
+        "value": {},
+        "tick": { "type": "number" }
+      }
+    }
+  }
+}
