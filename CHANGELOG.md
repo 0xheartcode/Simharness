@@ -49,6 +49,10 @@ existing single-adapter tooling keeps working and will migrate onto the engine o
   protocol v0 unchanged, so the existing tooling adapts onto the engine. The chase game example runs through it.
 - **stdio transport hardening** (`src/engine/protocol`): a wall-clock per-request safety timeout so a hung child fails
   loud instead of blocking, plus captured child stderr and exit status surfaced for diagnosing a crashed adapter.
+- **LLM-handoff failure report**: a CLI `explain <seed>` command that emits a self-contained, copy-pasteable report
+  (seed, profile, the broken invariant, the minimal fault schedule, and the tick-stamped event log tail).
+- **Docs**: a positioning record (ADR-006, where this sits versus Antithesis, Shuttle, Turmoil, Tickloom), a migration
+  guide (an existing `SimAdapter` onto the engine), and a reference-systems guide (quorum-KV, gossip-register, chase).
 
 ## [0.0.0-alpha.1] - 2026-11-04
 

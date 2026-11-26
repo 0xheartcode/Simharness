@@ -13,3 +13,8 @@ old one.
   with no shape change forced.
 - [ADR-005: determinism contract](0005-determinism-contract.md) - the SUT determinism rules and the fitness function
   that enforces them in `make check`.
+- [ADR-006: positioning](0006-positioning.md) - the one-sentence why, and where this sits versus Antithesis, Shuttle,
+  Turmoil, and Tickloom.
+
+Guides live in [`docs/guide`](../guide): migrating an existing adapter onto the engine, and the reference systems under
+test.

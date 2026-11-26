@@ -146,6 +146,35 @@ export function runCli(argv: readonly string[], scenario: Scenario): number {
       return 0;
     }
 
+    case "explain": {
+      const seed = int(positionals[1], 0);
+      const run = runScenario(scenario, { seed, ticks, profile });
+      const breaks = checkInvariants(scenario, run);
+      if (breaks.length === 0) {
+        log(`clean: scenario=${scenario.name} seed=${seed} holds; nothing to explain`);
+        return 0;
+      }
+      const repro = minimalRepro(scenario, { seed, ticks, profile }, (r) => checkInvariants(scenario, r).length > 0);
+      const tail = run.events.slice(-20);
+      log("=== simharness failure report ===");
+      log(`scenario: ${scenario.name}`);
+      log(`seed: ${seed}   ticks: ${ticks}   profile: ${profile}`);
+      log(`invariant: ${breaks[0]}`);
+      if (repro) {
+        log("");
+        log(`minimal fault schedule (${repro.mask.length} of ${repro.fullFaultCount} faults essential):`);
+        for (const e of repro.appliedFaults) {
+          log(`  tick=${e.tick} ${e.action} ${e.targets.join(",")}${e.detail ? " " + JSON.stringify(e.detail) : ""}`);
+        }
+      }
+      log("");
+      log(`event log (last ${tail.length} of ${run.events.length}):`);
+      for (const e of tail) log(`  tick=${e.tick} ${e.type}${e.detail ? " " + JSON.stringify(e.detail) : ""}`);
+      log("");
+      log(`reproduce: explain ${seed} --ticks ${ticks} --profile ${profile}`);
+      return 1;
+    }
+
     case "metrics": {
       let faults = 0, delivers = 0, requests = 0;
       for (let seed = 0; seed < seeds; seed++) {
@@ -167,7 +196,9 @@ export function runCli(argv: readonly string[], scenario: Scenario): number {
     }
 
     default:
-      log("usage: <run|replay|fuzz|assert|snap|metrics> [seed] [--ticks N] [--seeds N] [--profile NAME] [--json]");
+      log(
+        "usage: <run|replay|fuzz|assert|snap|metrics|explain> [seed] [--ticks N] [--seeds N] [--profile NAME] [--json]",
+      );
       return 2;
   }
 }
