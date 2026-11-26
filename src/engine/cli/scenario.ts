@@ -43,6 +43,8 @@ export interface RunOptions {
   seed: number;
   ticks: number;
   profile: string;
+  /** Apply only these fault indices (for shrinking); undefined applies all. */
+  mask?: ReadonlySet<number>;
 }
 
 /** Build and run the scenario once, deterministically, and collect the result. */
@@ -64,6 +66,7 @@ export function runScenario(scenario: Scenario, opts: RunOptions): ScenarioRun {
           deps.clock,
           deps.log,
           faultProfile(opts.profile),
+          opts.mask,
         ),
       ];
       if (scenario.requestGen) {

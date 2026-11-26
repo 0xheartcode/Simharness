@@ -6,6 +6,7 @@
 
 import { checkInvariants, runScenario, type Scenario, type ScenarioRun } from "./scenario.ts";
 import { snapshot } from "../core/snapshot.ts";
+import { minimalRepro } from "../check/shrink.ts";
 
 interface Flags {
   positionals: string[];
@@ -94,12 +95,30 @@ export function runCli(argv: readonly string[], scenario: Scenario): number {
     }
 
     case "fuzz": {
+      const shrink = values["no-shrink"] !== true;
       for (let seed = 0; seed < seeds; seed++) {
         const run = runScenario(scenario, { seed, ticks, profile });
         const breaks = checkInvariants(scenario, run);
         if (breaks.length > 0) {
           log(`FAIL seed=${seed} profile=${profile} ticks=${ticks}: ${breaks[0]}`);
           log(`  reproduce with: replay ${seed} --ticks ${ticks} --profile ${profile}`);
+          if (shrink) {
+            const repro = minimalRepro(
+              scenario,
+              { seed, ticks, profile },
+              (r) => checkInvariants(scenario, r).length > 0,
+            );
+            if (repro) {
+              log(`  minimal repro: ${repro.mask.length} of ${repro.fullFaultCount} faults are essential:`);
+              for (const e of repro.appliedFaults) {
+                log(
+                  `    tick=${e.tick} ${e.action} ${e.targets.join(",")}${
+                    e.detail ? " " + JSON.stringify(e.detail) : ""
+                  }`,
+                );
+              }
+            }
+          }
           return 1;
         }
       }
