@@ -59,6 +59,11 @@ existing single-adapter tooling keeps working and will migrate onto the engine o
   where the TypeScript orchestrator drives the compiled Rust echo binary over stdio. Adds `make rs-check` / `rs-build`,
   a CI `rust` job, Rust determinism rules in the `determinism` wall (no unordered hash iteration, no clock, no unseeded
   entropy, no threads), and tracks `rs/Cargo.lock`.
+- **Rust orchestrator** (`rs/simharness-orchestrator`): a single static binary that drives a stdio system under test
+  through protocol v0 with `run` / `replay` / `fuzz` / `snap`, a seeded action driver, and seed-first reporting. It
+  checks the one property a black-box SUT can be held to without knowing its invariants: determinism (same seed gives an
+  identical final state and snapshot, with no unexpected protocol error). A cross-language test has the Rust
+  orchestrator drive the TypeScript echo adapter over stdio, completing both orchestrator-drives-adapter directions.
 
 ## [0.0.0-alpha.1] - 2026-11-04
 

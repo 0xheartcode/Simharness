@@ -1,0 +1,15 @@
+[package]
+name = "simharness-orchestrator"
+description = "Rust orchestrator that drives a Simharness protocol v0 system under test over stdio."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+serde_json = "1.0.128"
+simharness-adapter = { path = "../simharness-adapter" }
+
+[[bin]]
+name = "simharness-orchestrator"
+path = "src/main.rs"
