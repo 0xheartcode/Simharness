@@ -1,0 +1,15 @@
+[package]
+name = "simharness-adapter"
+description = "Rust adapter SDK for the Simharness protocol v0 (in-process and stdio)."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+serde = { version = "1.0.210", features = ["derive"] }
+serde_json = "1.0.128"
+
+[[bin]]
+name = "simharness-echo"
+path = "src/bin/echo.rs"

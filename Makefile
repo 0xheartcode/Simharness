@@ -20,7 +20,8 @@ DENO ?= deno
 # up as slices land; never down to pass. Actual at 0.0.0-alpha.0: 98.0%.
 COV_FLOOR ?= 95
 
-.PHONY: check fmt lint typecheck deps version api api-check determinism test cov-gate cov cov-html compile package clean
+.PHONY: check fmt lint typecheck deps version api api-check determinism test cov-gate cov cov-html compile package clean \
+	rs-fmt rs-clippy rs-test rs-build rs-check
 
 check: fmt lint typecheck deps version api-check determinism test cov-gate
 	@echo "═══ make check: ALL WALLS GREEN ═══"
@@ -87,5 +88,30 @@ package:
 	@echo "── package (JSR publish dry run) ──"
 	$(DENO) publish --dry-run --allow-dirty
 
+# --- Rust adapter SDK (rs/) ---
+# The Rust crates build independently of the Deno gate. `make check` stays
+# Deno-only so a TypeScript-only checkout needs no Rust toolchain; CI runs
+# rs-check in its own job. The determinism wall (above) scans the Rust core too.
+
+rs-fmt:
+	@echo "── rs fmt ──"
+	cd rs && cargo fmt --check
+
+rs-clippy:
+	@echo "── rs clippy (warnings are errors) ──"
+	cd rs && cargo clippy --all-targets -- -D warnings
+
+rs-test:
+	@echo "── rs test (incl cross-language conformance) ──"
+	cd rs && cargo test
+
+rs-build:
+	@echo "── rs build (release) ──"
+	cd rs && cargo build --release
+
+rs-check: rs-fmt rs-clippy rs-test
+	@echo "═══ rs-check: RUST WALLS GREEN ═══"
+
 clean:
 	rm -rf coverage dist
+	cd rs && cargo clean 2>/dev/null || true

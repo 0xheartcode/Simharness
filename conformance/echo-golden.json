@@ -1,0 +1,247 @@
+[
+  {
+    "request": {
+      "v": 0,
+      "id": 1,
+      "op": "hello",
+      "args": {
+        "protocol": 0
+      }
+    },
+    "response": {
+      "v": 0,
+      "id": 1,
+      "ok": true,
+      "result": {
+        "name": "echo",
+        "protocol": 0,
+        "supportsActions": true,
+        "supportsNetwork": false,
+        "supportsStorage": false,
+        "supportsByteNetwork": false,
+        "deterministicConcurrency": true
+      }
+    }
+  },
+  {
+    "request": {
+      "v": 0,
+      "id": 2,
+      "op": "reset",
+      "args": {
+        "seed": 11
+      }
+    },
+    "response": {
+      "v": 0,
+      "id": 2,
+      "ok": true,
+      "result": null
+    }
+  },
+  {
+    "request": {
+      "v": 0,
+      "id": 3,
+      "op": "available_actions",
+      "args": {}
+    },
+    "response": {
+      "v": 0,
+      "id": 3,
+      "ok": true,
+      "result": [
+        "ping",
+        "pong"
+      ]
+    }
+  },
+  {
+    "request": {
+      "v": 0,
+      "id": 4,
+      "op": "act",
+      "args": {
+        "action": "ping"
+      }
+    },
+    "response": {
+      "v": 0,
+      "id": 4,
+      "ok": true,
+      "result": null
+    }
+  },
+  {
+    "request": {
+      "v": 0,
+      "id": 5,
+      "op": "read_state",
+      "args": {}
+    },
+    "response": {
+      "v": 0,
+      "id": 5,
+      "ok": true,
+      "result": {
+        "tick": 0,
+        "phase": "running",
+        "extra": {
+          "seed": 11,
+          "last": "ping"
+        }
+      }
+    }
+  },
+  {
+    "request": {
+      "v": 0,
+      "id": 6,
+      "op": "tick",
+      "args": {}
+    },
+    "response": {
+      "v": 0,
+      "id": 6,
+      "ok": true,
+      "result": null
+    }
+  },
+  {
+    "request": {
+      "v": 0,
+      "id": 7,
+      "op": "read_state",
+      "args": {}
+    },
+    "response": {
+      "v": 0,
+      "id": 7,
+      "ok": true,
+      "result": {
+        "tick": 1,
+        "phase": "running",
+        "extra": {
+          "seed": 11,
+          "last": "ping"
+        }
+      }
+    }
+  },
+  {
+    "request": {
+      "v": 0,
+      "id": 8,
+      "op": "deliver",
+      "args": {
+        "message": {
+          "from": "a",
+          "to": "b",
+          "kind": "x",
+          "payload": {}
+        }
+      }
+    },
+    "response": {
+      "v": 0,
+      "id": 8,
+      "ok": false,
+      "error": {
+        "code": "unsupported",
+        "op": "deliver"
+      }
+    }
+  },
+  {
+    "request": {
+      "v": 0,
+      "id": 9,
+      "op": "reset",
+      "args": {
+        "seed": "nope"
+      }
+    },
+    "response": {
+      "v": 0,
+      "id": 9,
+      "ok": false,
+      "error": {
+        "code": "bad_args",
+        "op": "reset",
+        "reason": "seed must be a finite number"
+      }
+    }
+  },
+  {
+    "request": {
+      "v": 0,
+      "id": 10,
+      "op": "act",
+      "args": {
+        "action": 42
+      }
+    },
+    "response": {
+      "v": 0,
+      "id": 10,
+      "ok": false,
+      "error": {
+        "code": "bad_args",
+        "op": "act",
+        "reason": "action must be a string"
+      }
+    }
+  },
+  {
+    "request": {
+      "v": 0,
+      "id": 11,
+      "op": "hello",
+      "args": {
+        "protocol": 9
+      }
+    },
+    "response": {
+      "v": 0,
+      "id": 11,
+      "ok": false,
+      "error": {
+        "code": "protocol_mismatch",
+        "expected": 0,
+        "got": 9
+      }
+    }
+  },
+  {
+    "request": {
+      "v": 1,
+      "id": 12,
+      "op": "read_state",
+      "args": {}
+    },
+    "response": {
+      "v": 0,
+      "id": 12,
+      "ok": false,
+      "error": {
+        "code": "protocol_mismatch",
+        "expected": 0,
+        "got": 1
+      }
+    }
+  },
+  {
+    "request": {
+      "v": 0,
+      "id": 13,
+      "op": "bye",
+      "args": {}
+    },
+    "response": {
+      "v": 0,
+      "id": 13,
+      "ok": true,
+      "result": null
+    }
+  }
+]

@@ -7,6 +7,7 @@ node_modules/
 # build + coverage artifacts
 dist/
 coverage/
+rs/target/
 
 # local-only design notes (kept out of the public repo). Everything under docs/
 # is ignored by default so stray notes never leak; only docs/adr/ and docs/guide/
