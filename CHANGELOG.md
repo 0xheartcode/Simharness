@@ -59,6 +59,11 @@ existing single-adapter tooling keeps working and will migrate onto the engine o
   where the TypeScript orchestrator drives the compiled Rust echo binary over stdio. Adds `make rs-check` / `rs-build`,
   a CI `rust` job, Rust determinism rules in the `determinism` wall (no unordered hash iteration, no clock, no unseeded
   entropy, no threads), and tracks `rs/Cargo.lock`.
+- **Coverage-guided fuzzing and a byte-level channel** (`rs/simharness-fuzz`): a coverage-guided fuzzer (the AFL idea at
+  its core) that keeps a corpus of inputs reaching new coverage and so finds a deep bug (a 4-byte needle) that a blind
+  search cannot; and a byte-level channel that fragments a stream into seeded chunks ignoring frame boundaries, exposing
+  a split-frame bug that whole-frame (message-level) delivery hides. Demonstrable foundations of the advanced tiers and
+  of ADR-002's byte-level seam.
 - **Interleaving exploration** (`rs/simharness-explore`): a deterministic, exhaustive explorer of the interleavings of a
   small concurrent model (the Shuttle / loom idea at its core), returning the first schedule that breaks an invariant.
   It finds a lost-update from a non-atomic read-modify-write that a random search would usually miss, and reports none
