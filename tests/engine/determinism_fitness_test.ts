@@ -1,7 +1,7 @@
 // #38: the determinism fitness function flags planted replay-breakers in a core
 // module and passes the real core. This is the wall that make check enforces.
 
-import { scanSource, scanTree } from "../../scripts/check_determinism.ts";
+import { scanRustTree, scanSource, scanTree } from "../../scripts/check_determinism.ts";
 import { assert, assertEquals, assertStrictEquals } from "../assert.ts";
 
 Deno.test("scanSource: clean core code has no violations", () => {
@@ -37,5 +37,10 @@ Deno.test("scanSource: a forbidden pattern inside a comment is not a violation",
 
 Deno.test("scanTree: the real engine core is determinism-clean", async () => {
   const violations = await scanTree();
+  assertEquals(violations, [], violations.map((v) => `${v.path}:${v.line} ${v.rule}`).join("; "));
+});
+
+Deno.test("scanRustTree: the Rust adapter SDK core is determinism-clean", async () => {
+  const violations = await scanRustTree();
   assertEquals(violations, [], violations.map((v) => `${v.path}:${v.line} ${v.rule}`).join("; "));
 });

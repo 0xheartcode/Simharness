@@ -34,3 +34,26 @@ jobs:
 
       - name: make package (JSR publish dry run)
         run: make package
+
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Install Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: "2.9.8"
+
+      - name: make rs-check (fmt, clippy, cargo test)
+        run: make rs-check
+
+      - name: build the echo binary and run the live cross-language conformance
+        run: |
+          make rs-build
+          deno test --allow-read --allow-write --allow-env --allow-run tests/engine/conformance_test.ts

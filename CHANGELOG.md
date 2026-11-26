@@ -53,6 +53,12 @@ existing single-adapter tooling keeps working and will migrate onto the engine o
   (seed, profile, the broken invariant, the minimal fault schedule, and the tick-stamped event log tail).
 - **Docs**: a positioning record (ADR-006, where this sits versus Antithesis, Shuttle, Turmoil, Tickloom), a migration
   guide (an existing `SimAdapter` onto the engine), and a reference-systems guide (quorum-KV, gossip-register, chase).
+- **Rust adapter SDK** (`rs/simharness-adapter`): protocol v0 in Rust (types, dispatch with the reference semantics, a
+  stdio JSON-line server, and an echo adapter), proving the protocol is polyglot. Cross-language conformance is checked
+  two ways against a shared golden fixture generated from the TypeScript reference: a Rust `cargo test`, and a live test
+  where the TypeScript orchestrator drives the compiled Rust echo binary over stdio. Adds `make rs-check` / `rs-build`,
+  a CI `rust` job, Rust determinism rules in the `determinism` wall (no unordered hash iteration, no clock, no unseeded
+  entropy, no threads), and tracks `rs/Cargo.lock`.
 
 ## [0.0.0-alpha.1] - 2026-11-04
 

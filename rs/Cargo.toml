@@ -1,0 +1,11 @@
+# The Rust side of Simharness: the adapter SDK (protocol v0 over stdio) and, in a
+# later phase, the orchestrator binary. Kept in its own workspace under rs/ so the
+# Deno/TypeScript engine and the Rust crates build independently.
+[workspace]
+members = ["simharness-adapter"]
+resolver = "2"
+
+[workspace.package]
+version = "0.0.0"
+edition = "2021"
+license = "MIT"

@@ -46,12 +46,57 @@ export function scanSource(source: string, path: string): Violation[] {
   return out;
 }
 
+/**
+ * The Rust determinism rules (ADR-005 rules 5 and 6): no unordered hash
+ * iteration, no real clock, no unseeded entropy, no threads. The TS engine does
+ * not need rule 5 (Map/Set are insertion-ordered), but the Rust core does.
+ */
+const RUST_RULES: { rule: string; re: RegExp }[] = [
+  { rule: "no unordered map (use BTreeMap)", re: /\bHashMap\b/ },
+  { rule: "no unordered set (use BTreeSet)", re: /\bHashSet\b/ },
+  { rule: "no wall clock (SystemTime)", re: /\bSystemTime\b/ },
+  { rule: "no wall clock (Instant)", re: /\bInstant\b/ },
+  { rule: "no unseeded entropy (rand)", re: /\brand::/ },
+  { rule: "no unseeded entropy (thread_rng)", re: /\bthread_rng\b/ },
+  { rule: "no threads (thread::spawn)", re: /\bthread::spawn\b/ },
+];
+
 /** The core modules to scan, and the transport-boundary files to skip. */
 const CORE_ROOT = "src/engine";
 const EXCLUDE = new Set([
   "src/engine/protocol/stdio.ts",
   "src/engine/protocol/lines.ts",
 ]);
+
+/** Scan the Rust crate sources (rs/<crate>/src) for the Rust determinism rules. */
+export async function scanRustTree(root = "rs"): Promise<Violation[]> {
+  const violations: Violation[] = [];
+  const walk = async (dir: string): Promise<void> => {
+    let entries: Deno.DirEntry[];
+    try {
+      entries = [...Deno.readDirSync(dir)];
+    } catch {
+      return; // rs/ absent (e.g. a Deno-only checkout): nothing to scan
+    }
+    for (const entry of entries) {
+      const path = `${dir}/${entry.name}`;
+      if (path.includes("/target/") || path.endsWith("/tests")) continue;
+      if (entry.isDirectory) {
+        await walk(path);
+      } else if (entry.name.endsWith(".rs") && !path.includes("/tests/")) {
+        const code = stripComments(await Deno.readTextFile(path));
+        const lines = code.split("\n");
+        for (let i = 0; i < lines.length; i++) {
+          for (const { rule, re } of RUST_RULES) {
+            if (re.test(lines[i])) violations.push({ path, line: i + 1, rule });
+          }
+        }
+      }
+    }
+  };
+  await walk(root);
+  return violations;
+}
 
 /** Walk the core tree and scan every .ts file that is not an excluded boundary. */
 export async function scanTree(root = CORE_ROOT, exclude = EXCLUDE): Promise<Violation[]> {
@@ -71,7 +116,7 @@ export async function scanTree(root = CORE_ROOT, exclude = EXCLUDE): Promise<Vio
 }
 
 if (import.meta.main) {
-  const violations = await scanTree();
+  const violations = [...await scanTree(), ...await scanRustTree()];
   if (violations.length > 0) {
     console.error(`determinism check FAILED: ${violations.length} violation(s)`);
     for (const v of violations) console.error(`  ${v.path}:${v.line}  ${v.rule}`);
