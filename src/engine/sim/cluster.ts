@@ -28,6 +28,8 @@ export interface Node {
   tick(): void;
   /** Handle one delivered message, synchronously, on the driver thread. May send more. */
   onMessage(msg: Message): void;
+  /** Optional readable state, for snapshots and invariant checks. */
+  state?(): unknown;
 }
 
 /** The in-memory network a cluster routes through. Implementations: DirectNetwork, SimulatedNetwork. */
@@ -56,6 +58,20 @@ export interface NodeDeps {
 }
 
 /**
+ * What a controller factory is handed. Controllers (fault schedulers, client
+ * workloads) are ticked before the nodes each step, so a fault set or a client
+ * request this tick is visible to the nodes that act this tick.
+ */
+export interface ControllerDeps {
+  ids: readonly ProcessId[];
+  clock: TickClock;
+  log: EventLog;
+  entropy: Entropy;
+  /** Inject a message into the network from outside the cluster. */
+  send: (msg: Message) => void;
+}
+
+/**
  * A cluster of processes over one network, driven deterministically. Tick order
  * is fixed: clock, then every node in id order, then the network delivers. A
  * message sent during a node tick or a message handler is queued and delivered
@@ -75,6 +91,7 @@ export class Cluster {
     ids: readonly ProcessId[],
     networkFactory: NetworkFactory,
     buildNode: (deps: NodeDeps) => Node,
+    buildControllers?: (deps: ControllerDeps) => readonly Tickable[],
   ) {
     this.clock = new TickClock();
     this.entropy = createEntropy(seed);
@@ -92,10 +109,22 @@ export class Cluster {
       if (this.#registry.has(node.id)) throw new Error(`duplicate ProcessId: ${node.id}`);
       this.#registry.set(node.id, node);
     }
-    // Fixed order: clock, nodes in registration order, then the network delivers.
+    // Controllers are built after the network and nodes exist, so they can
+    // capture the network and send into a populated cluster. They tick before
+    // the nodes, so a fault set or a client request this tick is seen this tick.
+    const controllers = buildControllers
+      ? buildControllers({
+        ids,
+        clock: this.clock,
+        log: this.log,
+        entropy: this.entropy,
+        send: (msg) => this.#network.send(msg),
+      })
+      : [];
+    // Fixed order: clock, controllers, nodes in registration order, network.
     // Each node is ticked through a Tickable named by its id.
     const ticked: Tickable[] = nodes.map((n) => ({ name: n.id, tick: () => n.tick() }));
-    this.#driver = new Driver([this.clock, ...ticked, this.#network]);
+    this.#driver = new Driver([this.clock, ...controllers, ...ticked, this.#network]);
   }
 
   /** Ticks taken so far. */
