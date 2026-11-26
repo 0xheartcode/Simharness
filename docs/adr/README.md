@@ -11,3 +11,5 @@ old one.
   transports).
 - [Phase-0 gate go/no-go](0004-phase-0-gate-go-no-go.md) - GO: the contract hosts a real quorum-KV system under faults
   with no shape change forced.
+- [ADR-005: determinism contract](0005-determinism-contract.md) - the SUT determinism rules and the fitness function
+  that enforces them in `make check`.

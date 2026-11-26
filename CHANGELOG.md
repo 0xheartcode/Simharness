@@ -42,6 +42,9 @@ existing single-adapter tooling keeps working and will migrate onto the engine o
   contract, with a safety invariant that holds under seeded faults and is shown to have teeth.
 - **Cluster example** (`examples/gossip-register`): a gossip last-writer-wins register as real cluster nodes, with a
   safety invariant (adopted versions never regress) that passes for the correct node and fails for a buggy variant.
+- **Determinism fitness function** (`scripts/check_determinism.ts`, ADR-005): a `determinism` wall in `make check` that
+  fails the build on a wall-clock read, unseeded entropy, or real scheduling/async in the engine core. Documents the
+  full SUT determinism contract, including the rules the Rust SDK will enforce later.
 
 ## [0.0.0-alpha.1] - 2026-11-04
 

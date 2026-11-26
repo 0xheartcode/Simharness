@@ -125,7 +125,7 @@ We encode best practices as deterministic checks and loop until green. `make che
 exactly it.
 
 ```bash
-make check      # fmt + lint + typecheck + layering + version-sync + tests + coverage floor
+make check      # fmt + lint + typecheck + layering + version-sync + api + determinism + tests + coverage floor
 make cov        # coverage report (src only)
 make compile    # build dist/simharness
 make package    # validate the JSR publish (dry run)
