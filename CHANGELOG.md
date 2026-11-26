@@ -75,9 +75,10 @@ existing single-adapter tooling keeps working and will migrate onto the engine o
   entropy, no threads), and tracks `rs/Cargo.lock`.
 - **Coverage-guided fuzzing and a byte-level channel** (`rs/simharness-fuzz`): a coverage-guided fuzzer (the AFL idea at
   its core) that keeps a corpus of inputs reaching new coverage and so finds a deep bug (a 4-byte needle) that a blind
-  search cannot; and a byte-level channel that fragments a stream into seeded chunks ignoring frame boundaries, exposing
-  a split-frame bug that whole-frame (message-level) delivery hides. Demonstrable foundations of the advanced tiers and
-  of ADR-002's byte-level seam.
+  search cannot, with a richer mutation suite (append, flip, insert, delete, splice) and corpus minimization (greedy set
+  cover that preserves total coverage); and a byte-level channel that fragments a stream into seeded chunks ignoring
+  frame boundaries and can cut fragments mid-stream, exposing the split-frame and mid-frame-death bugs that whole-frame
+  (message-level) delivery hides.
 - **Interleaving exploration** (`rs/simharness-explore`): a deterministic explorer of the interleavings of a small
   concurrent model (the Shuttle / loom idea at its core). The `dpor` module adds a **partial-order reduction** (sleep
   sets over an independence relation: steps touching different objects, or both reads, commute), so N independent writes

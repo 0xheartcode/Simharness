@@ -73,15 +73,38 @@ pub mod coverage {
         pub coverage: usize,
         /// Iterations run before returning.
         pub iterations: usize,
+        /// The corpus inputs kept (each reached new coverage), for minimization.
+        pub corpus_inputs: Vec<Vec<u8>>,
     }
 
-    fn mutate(base: &[u8], rng: &mut Rng) -> Vec<u8> {
+    /// One mutation: append, flip, insert, delete, or splice a corpus donor's
+    /// tail. A richer operator set than a single flip reaches more structures.
+    fn mutate(base: &[u8], corpus: &[Vec<u8>], rng: &mut Rng) -> Vec<u8> {
         let mut out = base.to_vec();
-        if out.is_empty() || rng.below(2) == 0 {
-            out.push(rng.byte()); // grow
-        } else {
-            let i = rng.below(out.len());
-            out[i] = rng.byte(); // flip
+        let op = if out.is_empty() { 0 } else { rng.below(5) };
+        match op {
+            0 => out.push(rng.byte()),
+            1 => {
+                let i = rng.below(out.len());
+                out[i] = rng.byte();
+            }
+            2 => {
+                let i = rng.below(out.len() + 1);
+                out.insert(i, rng.byte());
+            }
+            3 => {
+                if out.len() > 1 {
+                    let i = rng.below(out.len());
+                    out.remove(i);
+                }
+            }
+            _ => {
+                let donor = &corpus[rng.below(corpus.len())];
+                if !donor.is_empty() {
+                    let cut = rng.below(donor.len());
+                    out.extend_from_slice(&donor[cut..]);
+                }
+            }
         }
         out
     }
@@ -97,7 +120,7 @@ pub mod coverage {
         }
         for it in 0..iterations {
             let base = corpus[rng.below(corpus.len())].clone();
-            let input = mutate(&base, &mut rng);
+            let input = mutate(&base, &corpus, &mut rng);
             let out = target.run(&input);
             if out.bug {
                 return FuzzResult {
@@ -105,6 +128,7 @@ pub mod coverage {
                     corpus: corpus.len(),
                     coverage: seen.len(),
                     iterations: it + 1,
+                    corpus_inputs: corpus,
                 };
             }
             let mut novel = false;
@@ -122,7 +146,45 @@ pub mod coverage {
             corpus: corpus.len(),
             coverage: seen.len(),
             iterations,
+            corpus_inputs: corpus,
         }
+    }
+
+    /// Reduce a corpus to a minimal subset that preserves its total coverage,
+    /// via greedy set cover: repeatedly take the input adding the most new
+    /// coverage. Ties favor shorter inputs (the AFL "favored" heuristic).
+    pub fn minimize_corpus<T: Target>(target: &T, corpus: &[Vec<u8>]) -> Vec<Vec<u8>> {
+        let covs: Vec<BTreeSet<u64>> = corpus
+            .iter()
+            .map(|input| target.run(input).coverage.into_iter().collect())
+            .collect();
+        let mut covered: BTreeSet<u64> = BTreeSet::new();
+        let mut chosen: Vec<usize> = Vec::new();
+        loop {
+            let mut best: Option<usize> = None;
+            let mut best_gain = 0usize;
+            for (idx, cov) in covs.iter().enumerate() {
+                if chosen.contains(&idx) {
+                    continue;
+                }
+                let gain = cov.iter().filter(|c| !covered.contains(c)).count();
+                if gain > best_gain || (gain == best_gain && gain > 0 && best.is_none()) {
+                    best_gain = gain;
+                    best = Some(idx);
+                }
+            }
+            match best {
+                Some(idx) => {
+                    for &c in &covs[idx] {
+                        covered.insert(c);
+                    }
+                    chosen.push(idx);
+                }
+                None => break,
+            }
+        }
+        chosen.sort_by_key(|&i| corpus[i].len());
+        chosen.into_iter().map(|i| corpus[i].clone()).collect()
     }
 
     /// A blind baseline: generate random inputs with no coverage feedback. Used
@@ -138,6 +200,7 @@ pub mod coverage {
                     corpus: 1,
                     coverage: 0,
                     iterations: it + 1,
+                    corpus_inputs: Vec::new(),
                 };
             }
         }
@@ -146,6 +209,7 @@ pub mod coverage {
             corpus: 1,
             coverage: 0,
             iterations,
+            corpus_inputs: Vec::new(),
         }
     }
 }
@@ -174,6 +238,29 @@ pub mod bytes {
             let take = 1 + rng.below(max_chunk.max(1));
             let end = (i + take).min(stream.len());
             chunks.push(stream[i..end].to_vec());
+            i = end;
+        }
+        chunks
+    }
+
+    /// Fragment a stream and cut (drop) some chunks mid-stream with probability
+    /// `cut_prob`: the mid-frame-death fault. Lost bytes desync a length-prefix
+    /// framer, which only a byte-level channel can produce.
+    pub fn fragment_with_cuts(
+        stream: &[u8],
+        seed: u64,
+        max_chunk: usize,
+        cut_prob: f64,
+    ) -> Vec<Vec<u8>> {
+        let mut rng = Rng::new(seed);
+        let mut chunks = Vec::new();
+        let mut i = 0;
+        while i < stream.len() {
+            let take = 1 + rng.below(max_chunk.max(1));
+            let end = (i + take).min(stream.len());
+            if (rng.next_u64() as f64) / (u64::MAX as f64) >= cut_prob {
+                chunks.push(stream[i..end].to_vec());
+            }
             i = end;
         }
         chunks

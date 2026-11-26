@@ -42,7 +42,10 @@ fn coverage_guidance_finds_a_deep_bug_a_blind_search_cannot() {
         guided.bug_input.is_some(),
         "coverage guidance must find the deep bug"
     );
-    assert_eq!(guided.bug_input.unwrap(), vec![7, 42, 99, 200]);
+    assert!(
+        guided.bug_input.unwrap().starts_with(&[7, 42, 99, 200]),
+        "the input must open the lock"
+    );
     assert!(
         guided.coverage >= 4,
         "it should have climbed through the intermediate states"
