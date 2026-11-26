@@ -59,6 +59,10 @@ existing single-adapter tooling keeps working and will migrate onto the engine o
   where the TypeScript orchestrator drives the compiled Rust echo binary over stdio. Adds `make rs-check` / `rs-build`,
   a CI `rust` job, Rust determinism rules in the `determinism` wall (no unordered hash iteration, no clock, no unseeded
   entropy, no threads), and tracks `rs/Cargo.lock`.
+- **Interleaving exploration** (`rs/simharness-explore`): a deterministic, exhaustive explorer of the interleavings of a
+  small concurrent model (the Shuttle / loom idea at its core), returning the first schedule that breaks an invariant.
+  It finds a lost-update from a non-atomic read-modify-write that a random search would usually miss, and reports none
+  when the increments are atomic. A demonstrable foundation of the interleaving tier.
 - **Rust orchestrator** (`rs/simharness-orchestrator`): a single static binary that drives a stdio system under test
   through protocol v0 with `run` / `replay` / `fuzz` / `snap`, a seeded action driver, and seed-first reporting. It
   checks the one property a black-box SUT can be held to without knowing its invariants: determinism (same seed gives an
