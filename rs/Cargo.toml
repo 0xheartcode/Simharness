@@ -2,7 +2,7 @@
 # later phase, the orchestrator binary. Kept in its own workspace under rs/ so the
 # Deno/TypeScript engine and the Rust crates build independently.
 [workspace]
-members = ["simharness-adapter", "simharness-orchestrator"]
+members = ["simharness-adapter", "simharness-orchestrator", "simharness-explore"]
 resolver = "2"
 
 [workspace.package]

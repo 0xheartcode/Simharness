@@ -84,6 +84,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "simharness-explore"
+version = "0.0.0"
+
+[[package]]
 name = "simharness-orchestrator"
 version = "0.0.0"
 dependencies = [
