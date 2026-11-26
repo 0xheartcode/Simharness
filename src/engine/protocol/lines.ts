@@ -88,9 +88,17 @@ export class LineClient {
   #nextId = 0;
   #pending = new Map<number, (r: Response) => void>();
   #loop: Promise<void>;
+  readonly #timeoutMs: number;
 
-  constructor(input: ReadableStream<string>, output: WritableStream<string>) {
+  /**
+   * `timeoutMs` is a wall-clock safety timeout: if a response does not arrive in
+   * time the request fails loud instead of hanging CI. It is a liveness guard on
+   * the real-IO boundary, deliberately not part of the deterministic sim clock;
+   * 0 disables it.
+   */
+  constructor(input: ReadableStream<string>, output: WritableStream<string>, timeoutMs = 0) {
     this.#writer = output.getWriter();
+    this.#timeoutMs = timeoutMs;
     this.#loop = this.#readLoop(input);
   }
 
@@ -111,12 +119,31 @@ export class LineClient {
     this.#pending.clear();
   }
 
-  /** Send one operation and await its response. */
+  /** Send one operation and await its response (or a timeout, if one is set). */
   request(op: Op, args: Record<string, unknown> = {}): Promise<Response> {
     this.#nextId += 1;
     const id = this.#nextId;
     const req: Request = { v: PROTOCOL_VERSION, id, op, args };
-    const done = new Promise<Response>((resolve) => this.#pending.set(id, resolve));
+    const done = new Promise<Response>((resolve) => {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const settle = (r: Response) => {
+        if (timer !== undefined) clearTimeout(timer);
+        resolve(r);
+      };
+      this.#pending.set(id, settle);
+      if (this.#timeoutMs > 0) {
+        timer = setTimeout(() => {
+          if (this.#pending.delete(id)) {
+            resolve({
+              v: PROTOCOL_VERSION,
+              id,
+              ok: false,
+              error: { code: "sut_error", reason: "request timed out", op, timeoutMs: this.#timeoutMs },
+            });
+          }
+        }, this.#timeoutMs);
+      }
+    });
     this.#writer.write(encodeLine(req));
     return done;
   }
