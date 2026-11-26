@@ -17,6 +17,8 @@
 /// A concurrent system to explore: a shared state, a set of tasks (each a number
 /// of atomic steps), a step function, and the invariant that must hold once all
 /// tasks have finished.
+pub mod dpor;
+
 pub trait Model {
     type State: Clone;
 
