@@ -15,6 +15,13 @@ existing single-adapter tooling keeps working and will migrate onto the engine o
 
 ### Added
 
+- **Machine-readable failure reports for agentic workflows** (`src/engine/cli/cli.ts`): the two agent-facing commands
+  now emit a stable, versioned JSON envelope under `--json`. `fuzz --json` is the CI gate (a `fuzz-pass` or
+  `fuzz-failure` object with the offending seed, the broken invariant, the shrunk `minimalSchedule`, and a `reproduce`
+  line), and `explain --json` is the root-cause handoff (the same fields plus the tail of the tick-stamped event log),
+  so an agent loop parses structured data instead of scraping prose. The guided fuzzer returns the breaking fault script
+  directly. A new guide (`docs/guide/agentic-workflows.md`) documents the loop and the envelope schema, and the
+  `gossip-register` entrypoint takes `GOSSIP_BUGGY=1` so the loop runs end to end against a real failure.
 - **Byte-level network seam, engine-integrated** (`src/engine/sim/byte_network.ts`, ADR-002 phase-7): a tick-driven
   `SimulatedByteChannel` that delivers a byte stream in seeded fragments ignoring frame boundaries, and can cut a
   fragment mid-stream. A buffering framer recovers every frame under fragmentation; a naive one-read-one-frame framer
