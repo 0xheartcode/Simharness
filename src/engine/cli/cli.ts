@@ -50,6 +50,31 @@ function countEvents(run: ScenarioRun, type: string): number {
   return run.events.filter((e) => e.type === type).length;
 }
 
+/**
+ * The broken-invariant fields for a JSON report: the first (the signal), a
+ * capped sample, and the total count. Capping keeps the envelope lean for an
+ * agent when one bug trips a long cascade of related violations.
+ */
+function invariantFields(breaks: string[]) {
+  return { invariant: breaks[0], invariants: breaks.slice(0, 5), invariantCount: breaks.length };
+}
+
+/**
+ * The shrunk fault schedule as structured fields, for the JSON report envelope.
+ * When shrinking is off or finds no minimal set, every field is null so the
+ * shape stays stable for a parser.
+ */
+function reproFields(
+  scenario: Scenario,
+  opts: { seed: number; ticks: number; profile: string },
+  shrink: boolean,
+) {
+  const repro = shrink ? minimalRepro(scenario, opts, (r) => checkInvariants(scenario, r).length > 0) : null;
+  return repro
+    ? { minimalSchedule: repro.appliedFaults, essentialFaults: repro.mask.length, totalFaults: repro.fullFaultCount }
+    : { minimalSchedule: null, essentialFaults: null, totalFaults: null };
+}
+
 /** Run one scenario CLI invocation. Returns the process exit code. */
 export function runCli(argv: readonly string[], scenario: Scenario): number {
   const { positionals, values } = parseArgs(argv);
@@ -99,8 +124,28 @@ export function runCli(argv: readonly string[], scenario: Scenario): number {
     case "fuzz": {
       if (values.guided === true) {
         const iterations = int(values.iterations, 20000);
-        const result = coverageFuzz(scenario, { seed: int(positionals[1], 0), ticks, iterations });
+        const seed = int(positionals[1], 0);
+        const result = coverageFuzz(scenario, { seed, ticks, iterations });
         if (result.bug) {
+          if (json) {
+            log({
+              v: 1,
+              report: "fuzz-failure",
+              mode: "guided",
+              scenario: scenario.name,
+              seed,
+              ticks,
+              profile,
+              ...invariantFields(result.bug.breaks),
+              // The guided fuzzer searches fault scripts directly, so the
+              // breaking schedule is the reproduction (there is no seed to
+              // replay); handed to the agent as minimalSchedule.
+              minimalSchedule: result.bug.faults,
+              foundAtIteration: result.iterations,
+              coverage: result.coverage,
+            });
+            return 1;
+          }
           log(`FAIL: coverage-guided fuzzing found a fault script that breaks an invariant: ${result.bug.breaks[0]}`);
           log(`  found at iteration ${result.iterations} (coverage ${result.coverage}); faults:`);
           for (const e of result.bug.faults) {
@@ -109,6 +154,20 @@ export function runCli(argv: readonly string[], scenario: Scenario): number {
             );
           }
           return 1;
+        }
+        if (json) {
+          log({
+            v: 1,
+            report: "fuzz-pass",
+            mode: "guided",
+            scenario: scenario.name,
+            seed,
+            ticks,
+            profile,
+            iterations: result.iterations,
+            coverage: result.coverage,
+          });
+          return 0;
         }
         log(
           `ok: coverage-guided fuzzing ran ${result.iterations} iterations, coverage ${result.coverage}, no invariant broken`,
@@ -120,6 +179,21 @@ export function runCli(argv: readonly string[], scenario: Scenario): number {
         const run = runScenario(scenario, { seed, ticks, profile });
         const breaks = checkInvariants(scenario, run);
         if (breaks.length > 0) {
+          if (json) {
+            log({
+              v: 1,
+              report: "fuzz-failure",
+              mode: "seeded",
+              scenario: scenario.name,
+              seed,
+              ticks,
+              profile,
+              ...invariantFields(breaks),
+              ...reproFields(scenario, { seed, ticks, profile }, shrink),
+              reproduce: `explain ${seed} --ticks ${ticks} --profile ${profile}`,
+            });
+            return 1;
+          }
           log(`FAIL seed=${seed} profile=${profile} ticks=${ticks}: ${breaks[0]}`);
           log(`  reproduce with: replay ${seed} --ticks ${ticks} --profile ${profile}`);
           if (shrink) {
@@ -141,6 +215,10 @@ export function runCli(argv: readonly string[], scenario: Scenario): number {
           }
           return 1;
         }
+      }
+      if (json) {
+        log({ v: 1, report: "fuzz-pass", mode: "seeded", scenario: scenario.name, seeds, ticks, profile });
+        return 0;
       }
       log(`ok: ${seeds} seeds x ${ticks} ticks, profile=${profile}, no invariant violated`);
       return 0;
@@ -171,11 +249,34 @@ export function runCli(argv: readonly string[], scenario: Scenario): number {
       const run = runScenario(scenario, { seed, ticks, profile });
       const breaks = checkInvariants(scenario, run);
       if (breaks.length === 0) {
+        if (json) {
+          log({ v: 1, report: "clean", scenario: scenario.name, seed, ticks, profile });
+          return 0;
+        }
         log(`clean: scenario=${scenario.name} seed=${seed} holds; nothing to explain`);
         return 0;
       }
       const repro = minimalRepro(scenario, { seed, ticks, profile }, (r) => checkInvariants(scenario, r).length > 0);
       const tail = run.events.slice(-20);
+      if (json) {
+        log({
+          v: 1,
+          report: "failure",
+          scenario: scenario.name,
+          seed,
+          ticks,
+          profile,
+          ...invariantFields(breaks),
+          minimalSchedule: repro ? repro.appliedFaults : null,
+          essentialFaults: repro ? repro.mask.length : null,
+          totalFaults: repro ? repro.fullFaultCount : null,
+          events: tail,
+          eventsShown: tail.length,
+          eventsTotal: run.events.length,
+          reproduce: `explain ${seed} --ticks ${ticks} --profile ${profile}`,
+        });
+        return 1;
+      }
       log("=== simharness failure report ===");
       log(`scenario: ${scenario.name}`);
       log(`seed: ${seed}   ticks: ${ticks}   profile: ${profile}`);

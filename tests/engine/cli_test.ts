@@ -86,6 +86,52 @@ Deno.test("cli explain: a clean seed has nothing to explain (exit 0)", () => {
   assert(r.out.includes("clean:"), r.out);
 });
 
+Deno.test("cli fuzz --json: a failure is a stable, versioned envelope an agent can parse", () => {
+  const r = cli(["fuzz", "--seeds", "25", "--ticks", "120", "--json"], true);
+  assertStrictEquals(r.code, 1);
+  const env = JSON.parse(r.out);
+  assertStrictEquals(env.v, 1);
+  assertStrictEquals(env.report, "fuzz-failure");
+  assertStrictEquals(env.mode, "seeded");
+  assertStrictEquals(typeof env.seed, "number");
+  assert(typeof env.invariant === "string" && env.invariant.length > 0, r.out);
+  // the shrink fields are always present (null when nothing is essential), so the shape is stable
+  assert("minimalSchedule" in env && "essentialFaults" in env && "totalFaults" in env, r.out);
+  assert(env.reproduce.startsWith(`explain ${env.seed} `), env.reproduce);
+});
+
+Deno.test("cli fuzz --json: a clean run is a fuzz-pass envelope (exit 0)", () => {
+  const r = cli(["fuzz", "--seeds", "25", "--ticks", "120", "--json"]);
+  assertStrictEquals(r.code, 0);
+  const env = JSON.parse(r.out);
+  assertStrictEquals(env.v, 1);
+  assertStrictEquals(env.report, "fuzz-pass");
+  assertStrictEquals(env.seeds, 25);
+});
+
+Deno.test("cli explain --json: the full failure report as one structured envelope", () => {
+  const fuzz = cli(["fuzz", "--seeds", "25", "--ticks", "120", "--json"], true);
+  const seed = JSON.parse(fuzz.out).seed as number;
+  const r = cli(["explain", String(seed), "--ticks", "120", "--json"], true);
+  assertStrictEquals(r.code, 1);
+  const env = JSON.parse(r.out);
+  assertStrictEquals(env.v, 1);
+  assertStrictEquals(env.report, "failure");
+  assertStrictEquals(env.seed, seed);
+  assert(typeof env.invariant === "string" && env.invariant.length > 0, r.out);
+  assert(Array.isArray(env.events) && env.events.length === env.eventsShown, r.out);
+  assertStrictEquals(typeof env.eventsTotal, "number");
+  assert(env.reproduce.startsWith(`explain ${seed} `), env.reproduce);
+});
+
+Deno.test("cli explain --json: a clean seed is a clean envelope (exit 0)", () => {
+  const r = cli(["explain", "2", "--ticks", "100", "--json"]);
+  assertStrictEquals(r.code, 0);
+  const env = JSON.parse(r.out);
+  assertStrictEquals(env.v, 1);
+  assertStrictEquals(env.report, "clean");
+});
+
 Deno.test("cli: an unknown command prints usage and exits 2", () => {
   const r = cli(["wat"]);
   assertStrictEquals(r.code, 2);

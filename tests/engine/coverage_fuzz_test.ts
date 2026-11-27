@@ -61,3 +61,24 @@ Deno.test("cli fuzz --guided: reports the fault script it found and exits 1", ()
   assertStrictEquals(code, 1);
   assert(out.join("\n").includes("coverage-guided fuzzing found a fault script"), out.join("\n"));
 });
+
+Deno.test("cli fuzz --guided --json: emits a structured fuzz-failure envelope", () => {
+  let code = -1;
+  const { out } = captureConsole(() => {
+    code = runCli(
+      ["fuzz", "1", "--guided", "--json", "--ticks", String(TICKS), "--iterations", "60000"],
+      cascadeScenario(),
+    );
+  });
+  assertStrictEquals(code, 1);
+  const env = JSON.parse(out.join("\n"));
+  assertStrictEquals(env.v, 1);
+  assertStrictEquals(env.report, "fuzz-failure");
+  assertStrictEquals(env.mode, "guided");
+  assert(env.invariant.includes("full-cascade"), env.invariant);
+  assert(
+    Array.isArray(env.minimalSchedule) && env.minimalSchedule.length > 0,
+    "the breaking fault script must be present",
+  );
+  assertStrictEquals(typeof env.foundAtIteration, "number");
+});
